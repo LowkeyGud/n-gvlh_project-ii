@@ -6,7 +6,7 @@ import { DataCard } from "./_components/data-card";
 
 const AnalyticsPage = async () => {
 
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) {
     return redirect('/');
   }

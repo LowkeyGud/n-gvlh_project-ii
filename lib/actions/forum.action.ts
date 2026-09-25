@@ -48,14 +48,14 @@ export async function createForum(params: CreateForumParams) {
   try {
     await connectToDatabase();
 
-    const { teacherId } = params;
-    // TODO: Make the forum title dynamic in future
-    const title = "FORUM";
+    const { teacherId, title: forumTitle } = params;
     const teacher = await User?.findOne({ clerkId: teacherId });
 
     if (!teacher || teacher.role !== "TEACHER") {
       throw new Error("Invalid teacher");
     }
+
+    const title = forumTitle ?? `${teacher.name}'s Forum`;
 
     const forumData = {
       title,
@@ -126,23 +126,21 @@ export async function isFollowing({
 
   await connectToDatabase();
 
-  //TODO: This method is so lame man
-  // We are getting teacher clerk id from params
-  // Then we find the teacher._id from clerkId as forum schema stores the teacher._id in it
-  // So one of the soultion is to change the forum schema to also store the clerkId of the teacher
-  const teacher = await User.findOne({ clerkId: teacherId });
-  const student = await User.findOne({ clerkId: studentId });
-  const forum = await Forum.findOne({ teacherId: teacher._id }).populate({
-    path: "followers",
-    match: { _id: { $eq: student._id } },
-    model: User,
+  const [teacher, student] = await Promise.all([
+    User.findOne({ clerkId: teacherId }).select("_id").lean(),
+    User.findOne({ clerkId: studentId }).select("_id").lean(),
+  ]);
+
+  if (!teacher || !student) {
+    return false;
+  }
+
+  const exists = await Forum.exists({
+    teacherId: teacher._id,
+    followers: student._id,
   });
 
-  const isFollowing = forum?.followers.some((follower) =>
-    follower._id.equals(student._id),
-  );
-
-  return isFollowing;
+  return !!exists;
 }
 
 /**
@@ -190,35 +188,41 @@ export async function getStudentAnnouncements(
     await connectToDatabase();
     const { studentId } = params;
 
-    // Step 1: Find the user (student)
-    const student = await User.findOne({ clerkId: studentId });
+    const student = await User.findOne({ clerkId: studentId })
+      .select("_id")
+      .lean();
+    if (!student) return [];
 
-    // Step 2: Find all forums the user is following
-    const forums = await Forum.find({ followers: student })
+    const forums = await Forum.find({ followers: student._id })
       .populate({
         path: "teacherId",
         model: User,
-        select: "name username picture", // Adjust fields as needed
+        select: "name username picture",
       })
+      .lean()
       .exec();
 
-    // Step 3: Extract and flatten the announcements
-    let allAnnouncements: IAnnouncement[] = [];
-    forums.forEach((forum: IForum) => {
-      forum.announcements.forEach((announcement: IAnnouncement) => {
-        // Ensure teacherId is properly typed as IUser to access name and picture
-        const teacherId = forum.teacherId;
-        if (teacherId) {
-          // Add teacher's name and picture to each announcement
-          announcement.teacherName = (teacherId as IUser).name;
-          announcement.teacherPicture = (teacherId as IUser).picture;
-          announcement.teacherUsername = (teacherId as IUser).username;
-        }
-        allAnnouncements.push(announcement);
-      });
-    });
+    const allAnnouncements: IAnnouncement[] = (forums as any[]).flatMap(
+      (forum) => {
+        const teacher = forum.teacherId as IUser | null;
+        return forum.announcements.map((announcement: IAnnouncement) => {
+          const plain =
+            typeof (announcement as any).toObject === "function"
+              ? (announcement as any).toObject()
+              : { ...announcement };
+          if (teacher) {
+            return {
+              ...plain,
+              teacherName: teacher.name,
+              teacherPicture: teacher.picture,
+              teacherUsername: teacher.username,
+            };
+          }
+          return plain;
+        });
+      }
+    );
 
-    // Step 4: Sort the announcements by updatedAt
     allAnnouncements.sort((a, b) => {
       const dateA = new Date(a.updatedAt || 0);
       const dateB = new Date(b.updatedAt || 0);
@@ -237,35 +241,41 @@ export async function getTeacherAnnouncements({
 }: {
   teacherClerkId: string;
 }) {
-  // Step 1: Find the user (student)
-  const teacher = await User.findOne({ clerkId: teacherClerkId });
+  const teacher = await User.findOne({ clerkId: teacherClerkId })
+    .select("_id")
+    .lean();
+  if (!teacher) return [];
 
-  // Step 2: Find all forums the user is following
-  const forums = await Forum.find({ teacherId: teacher })
+  const forums = await Forum.find({ teacherId: teacher._id })
     .populate({
       path: "teacherId",
       model: User,
-      select: "name username picture", // Adjust fields as needed
+      select: "name username picture",
     })
+    .lean()
     .exec();
 
-  // Step 3: Extract and flatten the announcements
-  let allAnnouncements: IAnnouncement[] = [];
-  forums.forEach((forum: IForum) => {
-    forum.announcements.forEach((announcement: IAnnouncement) => {
-      // Ensure teacherId is properly typed as IUser to access name and picture
-      const teacherId = forum.teacherId;
-      if (teacherId) {
-        // Add teacher's name and picture to each announcement
-        announcement.teacherName = (teacherId as IUser).name;
-        announcement.teacherPicture = (teacherId as IUser).picture;
-        announcement.teacherUsername = (teacherId as IUser).username;
-      }
-      allAnnouncements.push(announcement);
-    });
-  });
+  const allAnnouncements: IAnnouncement[] = (forums as any[]).flatMap(
+    (forum) => {
+      const teacherInfo = forum.teacherId as IUser | null;
+      return forum.announcements.map((announcement: IAnnouncement) => {
+        const plain =
+          typeof (announcement as any).toObject === "function"
+            ? (announcement as any).toObject()
+            : { ...announcement };
+        if (teacherInfo) {
+          return {
+            ...plain,
+            teacherName: teacherInfo.name,
+            teacherPicture: teacherInfo.picture,
+            teacherUsername: teacherInfo.username,
+          };
+        }
+        return plain;
+      });
+    }
+  );
 
-  // Step 4: Sort the announcements by updatedAt
   allAnnouncements.sort((a, b) => {
     const dateA = new Date(a.updatedAt || 0);
     const dateB = new Date(b.updatedAt || 0);

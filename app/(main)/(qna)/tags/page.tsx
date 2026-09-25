@@ -8,6 +8,7 @@ import { getAllTags } from "@/lib/actions/tag.action";
 import { SearchParamsProps } from "@/types";
 import { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   authors: [
@@ -25,10 +26,11 @@ export const metadata: Metadata = {
 };
 
 const Tags = async ({ searchParams }: SearchParamsProps) => {
+  const resolvedSearchParams = await searchParams;
   const { tags, hasNext } = await getAllTags({
-    searchQuery: searchParams.q,
-    filter: searchParams.filter,
-    page: searchParams.page ? +searchParams.page : 1,
+    searchQuery: resolvedSearchParams.q,
+    filter: resolvedSearchParams.filter,
+    page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
   });
 
   return (
@@ -36,18 +38,22 @@ const Tags = async ({ searchParams }: SearchParamsProps) => {
       <h1 className="h1-bold text-dark100_light900">All Tags</h1>
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchBar
-          route="/tags"
-          iconPosition="left"
-          imgSrc="/qna/search.svg"
-          placeholder="Search for tags"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={null}>
+          <LocalSearchBar
+            route="/tags"
+            iconPosition="left"
+            imgSrc="/qna/search.svg"
+            placeholder="Search for tags"
+            otherClasses="flex-1"
+          />
+        </Suspense>
 
-        <Filter
-          filters={TagFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-        />
+        <Suspense fallback={null}>
+          <Filter
+            filters={TagFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+          />
+        </Suspense>
       </div>
 
       <section className="flex-center mt-12 flex-wrap gap-4">
@@ -55,7 +61,7 @@ const Tags = async ({ searchParams }: SearchParamsProps) => {
           tags.map((tag: ITag) => (
             <Link
               href={`/tags/${tag._id}`}
-              key={tag._id}
+              key={tag._id.toString()}
               className="shadow-light100_darknone"
             >
               <article className="background-light900_dark200 light-border flex w-full flex-col rounded-2xl border px-8 py-10 sm:w-[260px]">
@@ -83,10 +89,12 @@ const Tags = async ({ searchParams }: SearchParamsProps) => {
           />
         )}
       </section>
-      <Pagination
-        pageNumber={searchParams?.page ? +searchParams.page : 1}
-        hasNext={hasNext}
-      />
+      <Suspense fallback={null}>
+        <Pagination
+          pageNumber={resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
+          hasNext={hasNext}
+        />
+      </Suspense>
     </>
   );
 };

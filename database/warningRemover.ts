@@ -1,7 +1,10 @@
 import mongoose from "mongoose";
 
-// Can be used to some of this warning:
+// Optional helper — currently not imported anywhere (dead code kept intentionally).
+// Can be used to resolve the Next.js warning:
 // Warning: Only plain objects can be passed to Client Components from Server Components. Objects with toJSON methods are not supported. Convert it manually to a simple value before passing it to props.
+// Alternative in this codebase is using `.toObject()` / `.lean()` as done in `lib/actions/course.action.ts`.
+// Keep this file as a reusable utility for manual ObjectId → string conversion if needed; safe to delete if never used.
 
 type PlainObject = { [key: string]: any };
 

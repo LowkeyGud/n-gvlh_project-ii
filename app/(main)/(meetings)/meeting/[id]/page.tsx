@@ -7,11 +7,13 @@ import MeetingSetup from "@/components/MeetingSetup";
 import { useGetCallById } from "@/hooks/useGetCallById";
 import { useUser } from "@clerk/nextjs";
 import { StreamCall, StreamTheme } from "@stream-io/video-react-sdk";
-import { useState } from "react";
+import { useParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
-const Meeting = ({ params }: { params: { id: string } }) => {
+const Meeting = () => {
+  const { id } = useParams<{ id: string }>();
   const { isLoaded, user } = useUser();
-  const { call, isCallLoading } = useGetCallById(params.id);
+  const { call, isCallLoading } = useGetCallById(id);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   if (!isLoaded || isCallLoading) return <Loader />;
 
@@ -36,7 +38,9 @@ const Meeting = ({ params }: { params: { id: string } }) => {
           {!isSetupComplete ? (
             <MeetingSetup setIsSetupComplete={setIsSetupComplete} />
           ) : (
-            <MeetingRoom />
+            <Suspense fallback={null}>
+              <MeetingRoom />
+            </Suspense>
           )}
         </StreamTheme>
       </StreamCall>

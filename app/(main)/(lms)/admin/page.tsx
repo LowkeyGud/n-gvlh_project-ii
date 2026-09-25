@@ -8,7 +8,7 @@ const AdminPage = async () => {
   const admin = await checkAdmin();
   if (!admin) redirect("/not-found");
   // Fetch user data from API or database
-  const userData = await User.find();
+  const userData = await User.find().lean();
 
   return (
     <div className="p-6">

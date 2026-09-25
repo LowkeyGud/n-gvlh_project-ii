@@ -1,11 +1,8 @@
-"use client";
-
 import { ThemeProvider } from "@/components/theme-provider";
 import { MyProvider } from "@/context/teacherContext";
 import { ConfettiProvider } from "@/providers/confetti-provider";
 import { ToastProvider } from "@/providers/taoster-provider";
 import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
 import { Inter } from "next/font/google";
 import "../styles/prism.css";
 import "./globals.css";
@@ -23,31 +20,39 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      signUpForceRedirectUrl="/"
-      signInForceRedirectUrl="/"
-      appearance={{
-        baseTheme: dark,
-        elements: {
-          formButtonPrimary: "border-white",
-          footerActionLink:
-            "primary-text-gradient hover:text-primary-500 primary-gradient",
-        },
-        layout: {
-          logoImageUrl: "/icons/logo-only.svg",
-        },
-        variables: {},
-      }}
-    >
-      <html lang="en">
-        <body className={inter.className}>
+    <html lang="en">
+      <body className={inter.className}>
+        <ClerkProvider
+          signUpForceRedirectUrl="/"
+          signInForceRedirectUrl="/"
+          appearance={{
+            variables: {
+              colorBackground: "#1c1f2e",
+              colorForeground: "#f1f2f6",
+              colorMutedForeground: "#a3aaba",
+              colorInput: "#252a3d",
+              colorInputForeground: "#f1f2f6",
+              colorBorder: "#3a4159",
+              colorNeutral: "white",
+              colorPrimary: "#7c3aed",
+              colorRing: "#7c3aed",
+              borderRadius: "0.75rem",
+            },
+            elements: {
+              formButtonPrimary:
+                "primary-gradient border-white hover:opacity-90",
+              footerActionLink: "primary-gradient bg-clip-text text-transparent",
+              logoImage: "h-10 w-10",
+            },
+          }}
+        >
           <ConfettiProvider />
           <ToastProvider />
           <ThemeProvider>
             <MyProvider>{children}</MyProvider>
           </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

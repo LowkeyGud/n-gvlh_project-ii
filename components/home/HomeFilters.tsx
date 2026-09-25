@@ -2,10 +2,10 @@
 import { HomePageFilters } from "@/constants/filters";
 import { formUrlQuery } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Button } from "../ui/button";
 
-const HomeFilters = () => {
+const HomeFiltersContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [active, setActive] = useState("");
@@ -55,6 +55,14 @@ const HomeFilters = () => {
         </Button>
       ))}
     </div>
+  );
+};
+
+const HomeFilters = () => {
+  return (
+    <Suspense fallback={null}>
+      <HomeFiltersContent />
+    </Suspense>
   );
 };
 

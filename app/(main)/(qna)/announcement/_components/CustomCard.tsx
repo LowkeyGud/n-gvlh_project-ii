@@ -23,9 +23,6 @@ export default function Component({
   return (
     <Card className="w-full overflow-hidden rounded-xl bg-white shadow-md dark:bg-gray-800">
       <div className="md:flex">
-        <div className="md:flex-shrink-0">
-          <span className="h-[192px] w-[192px] rounded-md bg-muted object-cover md:w-48" />
-        </div>
         <div className="w-full p-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">

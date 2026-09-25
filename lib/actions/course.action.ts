@@ -16,8 +16,8 @@ import { getProgress } from "./progress.action";
 
 export const getCourseNameById = async ({ courseId }: { courseId: string }) => {
   try {
-    connectToDatabase();
-    const courseName = await Course.findById(courseId);
+    await connectToDatabase();
+    const courseName = await Course.findById(courseId).lean();
     return courseName;
   } catch (error) {
     console.log("COURSE METADATA FETCHING ERROR ", error);
@@ -30,9 +30,8 @@ export const getCourses = async ({
   categoryId,
 }: GetCourses): Promise<any[]> => {
   try {
-    connectToDatabase();
-    // Fetch courses with the given conditions
-
+    await connectToDatabase();
+    // Fetch courses with the given conditions — use lean() to return plain objects for Next.js serialization
     const courses = categoryId
       ? await Course.find({
           isPublished: true,
@@ -40,28 +39,30 @@ export const getCourses = async ({
           categoryId,
         })
           .sort({ createdAt: -1 })
+          .lean()
           .exec()
       : await Course.find({
           isPublished: true,
           title: { $regex: title || "", $options: "i" },
         })
           .sort({ createdAt: -1 })
+          .lean()
           .exec();
 
     const coursesWithRelatedData = await Promise.all(
-      courses.map(async (course) => {
+      courses.map(async (course: any) => {
         const [category, chapters, purchases] = await Promise.all([
-          Category.findById(course.categoryId),
-          Chapter.find({ courseId: course._id, isPublished: true }, { _id: 1 }),
-          Purchase.find({ courseId: course._id, userId }),
+          Category.findById(course.categoryId).lean(),
+          Chapter.find({ courseId: course._id, isPublished: true }, { _id: 1 }).lean(),
+          Purchase.find({ courseId: course._id, userId }).lean(),
         ]);
 
-        course = course.toObject();
-        course.category = category;
-        course.chapters = chapters;
-        course.purchases = purchases;
-
-        return course;
+        return {
+          ...course,
+          category,
+          chapters,
+          purchases,
+        };
       }),
     );
 
@@ -94,30 +95,30 @@ export const getTeacherCourses = async ({
   teacherId,
 }: GetTeacherCourses): Promise<any[]> => {
   try {
-    connectToDatabase();
-    // Fetch courses with the given conditions
-
+    await connectToDatabase();
+    // Fetch courses with the given conditions — lean() for plain objects
     const courses = await Course.find({
       isPublished: true,
       userId: teacherId,
     })
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
 
     const coursesWithRelatedData = await Promise.all(
-      courses.map(async (course) => {
+      courses.map(async (course: any) => {
         const [category, chapters, purchases] = await Promise.all([
-          Category.findById(course.categoryId),
-          Chapter.find({ courseId: course._id, isPublished: true }, { _id: 1 }),
-          Purchase.find({ courseId: course._id, userId }),
+          Category.findById(course.categoryId).lean(),
+          Chapter.find({ courseId: course._id, isPublished: true }, { _id: 1 }).lean(),
+          Purchase.find({ courseId: course._id, userId }).lean(),
         ]);
 
-        course = course.toObject();
-        course.category = category;
-        course.chapters = chapters;
-        course.purchases = purchases;
-
-        return course;
+        return {
+          ...course,
+          category,
+          chapters,
+          purchases,
+        };
       }),
     );
 
@@ -151,36 +152,38 @@ export async function getCourseWithChaptersAndProgress(
   userId: string,
 ) {
   try {
-    connectToDatabase();
-    // Fetch the course by ID
-    const course = await Course.findById(courseId);
+    await connectToDatabase();
+    // Fetch the course by ID — lean() returns plain object, no toObject() needed
+    const course: any = await Course.findById(courseId).lean();
     if (!course) {
       throw new Error("Course not found");
     }
 
     // Fetch the published chapters for the course
-    const chapters = await Chapter.find({
+    const chapters: any[] = await Chapter.find({
       courseId,
       isPublished: true,
-    }).sort({ position: "asc" });
+    })
+      .sort({ position: "asc" })
+      .lean();
 
     // Fetch user progress for each chapter
     const chaptersWithProgress = await Promise.all(
-      chapters.map(async (chapter) => {
+      chapters.map(async (chapter: any) => {
         const userProgress = await UserProgress.findOne({
           userId,
           chapterId: chapter._id,
-        });
+        }).lean();
 
         return {
-          ...chapter.toObject(),
-          userProgress: userProgress ? userProgress.toObject() : null,
+          ...chapter,
+          userProgress: userProgress ? userProgress : null,
         };
       }),
     );
 
     return {
-      ...course.toObject(),
+      ...course,
       chapters: chaptersWithProgress,
     };
   } catch (error) {
@@ -191,23 +194,25 @@ export async function getCourseWithChaptersAndProgress(
 
 export async function getCourseWithPublishedChapters(courseId: string) {
   try {
-    connectToDatabase();
-    // Fetch the course by ID
-    const course = await Course.findById(courseId);
+    await connectToDatabase();
+    // Fetch the course by ID — lean() for plain object
+    const course: any = await Course.findById(courseId).lean();
 
     if (!course) {
       throw new Error("Course not found");
     }
 
-    // Fetch the published chapters for the course
-    const chapters = await Chapter.find({
+    // Fetch the published chapters for the course — lean() avoids need for toObject()
+    const chapters: any[] = await Chapter.find({
       courseId,
       isPublished: true,
-    }).sort({ position: "asc" });
-    // TODO: Change every database fetch to this toObject()
+    })
+      .sort({ position: "asc" })
+      .lean();
+
     return {
-      ...course.toObject(),
-      chapters: chapters.map((chapter) => chapter.toObject()),
+      ...course,
+      chapters,
     };
   } catch (error) {
     console.error("Error fetching course with chapters:", error);
@@ -225,38 +230,39 @@ export const getDashboardCourses = async (
   userId: string,
 ): Promise<DashboardCourses> => {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
-    const purchasedCourses = await Purchase.find({ userId }).exec();
+    const purchasedCourses: any[] = await Purchase.find({ userId }).lean().exec();
 
     const coursesWithDetails: CourseWithProgressWithCategory[] = [];
-    // Fetch user details
-    const userDetail = await User.findOne({ clerkId: userId }).exec();
+    // Fetch user details — lean() for plain object serialization
+    const userDetail: any = await User.findOne({ clerkId: userId }).lean().exec();
 
     for (const purchase of purchasedCourses) {
       // Fetch course details
-      const course = await Course.findById(purchase.courseId).exec();
+      const course: any = await Course.findById(purchase.courseId).lean().exec();
       if (!course) continue;
 
       // Fetch category details
-      const category = await Category.findById(course.categoryId).exec();
+      const category: any = await Category.findById(course.categoryId).lean().exec();
       if (!category) continue;
 
       // Fetch published chapters
-      const chapters = await Chapter.find({
+      const chapters: any[] = await Chapter.find({
         courseId: course._id,
         isPublished: true,
       })
         .sort({ position: "asc" })
+        .lean()
         .exec();
 
       // Calculate progress
       const progress = await getProgress(userId, course._id.toString());
 
       coursesWithDetails.push({
-        ...course.toObject(),
-        category: category.toObject(),
-        chapters: chapters.map((chapter) => chapter.toObject()),
+        ...course,
+        category,
+        chapters,
         progress,
       });
     }
@@ -283,4 +289,3 @@ export const getDashboardCourses = async (
     };
   }
 };
-

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import {
   Select,
   SelectContent,
@@ -21,7 +21,7 @@ interface Props {
   containerClasses?: string;
 }
 
-const Filter = ({ filters, otherClasses, containerClasses }: Props) => {
+const FilterContent = ({ filters, otherClasses, containerClasses }: Props) => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -64,6 +64,14 @@ const Filter = ({ filters, otherClasses, containerClasses }: Props) => {
         </SelectContent>
       </Select>
     </div>
+  );
+};
+
+const Filter = (props: Props) => {
+  return (
+    <Suspense fallback={null}>
+      <FilterContent {...props} />
+    </Suspense>
   );
 };
 

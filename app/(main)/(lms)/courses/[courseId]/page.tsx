@@ -1,8 +1,14 @@
 import { getCourseWithPublishedChapters } from "@/lib/actions/course.action";
 import { redirect } from "next/navigation";
 
-const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
-  const course = await getCourseWithPublishedChapters(params.courseId);
+const CourseIdPage = async ({
+  params,
+}: {
+  params: Promise<{ courseId: string }>;
+}) => {
+  const { courseId } = await params;
+
+  const course = await getCourseWithPublishedChapters(courseId);
 
   if (!course || !course.isPublished) {
     return redirect("/not-found");

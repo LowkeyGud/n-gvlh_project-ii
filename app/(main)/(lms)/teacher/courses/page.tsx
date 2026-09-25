@@ -25,19 +25,16 @@ export const metadata: Metadata = {
 };
 
 const CoursesPage = async () => {
-  const userId = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return redirect("/not-found");
   }
 
-  // Remove the getToken property from the userId object.
-  const { getToken, ...userIdWithoutToken } = userId;
-
   await connectToDatabase();
-  const courses = await Course.find({ userId: userIdWithoutToken.userId }).sort(
-    { createdAt: -1 },
-  );
+  const courses = await Course.find({ userId })
+    .sort({ createdAt: -1 })
+    .lean();
 
   return (
     <div className="p-6">

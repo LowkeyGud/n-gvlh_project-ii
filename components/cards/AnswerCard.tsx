@@ -36,7 +36,7 @@ const AnswerCard = ({
   const showActionButtons = clerkId && clerkId === author.clerkId;
   return (
     <div className="card-wrapper rounded-[10px] p-9 max-sm:p-3 sm:px-5">
-      <Link href={`/question/${question._id}/#${_id}`} passHref legacyBehavior>
+      <Link href={`/question/${question._id}/#${_id}`}>
         <div>
           <div className="flex flex-col-reverse items-start justify-between gap-5 sm:flex-row">
             <div>

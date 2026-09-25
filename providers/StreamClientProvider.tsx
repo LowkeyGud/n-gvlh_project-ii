@@ -27,6 +27,11 @@ const StreamVideoProvider = ({ children }: { children: ReactNode }) => {
     });
 
     setVideoClient(client);
+
+    return () => {
+      if (videoClient) videoClient.disconnectUser();
+      client.disconnectUser();
+    };
   }, [user, isLoaded]);
 
   if (!videoClient) return <Loader />;

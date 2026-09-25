@@ -8,7 +8,7 @@ export const getProgress = async (
   courseId: string
 ): Promise<number | null> => {
   try {
-    connectToDatabase();
+    await connectToDatabase();
     const publishedChapters = await Chapter.find(
       { courseId, isPublished: true },
       { _id: 1 }
@@ -16,6 +16,8 @@ export const getProgress = async (
 
     // Create an array of chapter IDs
     const publishedChapterIds = publishedChapters.map((chapter) => chapter._id);
+
+    if (!publishedChapterIds.length) return 0;
 
     // Count valid completed chapters
     const validCompletedChapters = await UserProgress.countDocuments({

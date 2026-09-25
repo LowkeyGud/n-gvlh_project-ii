@@ -7,6 +7,7 @@ import { getAllUsers } from "@/lib/actions/user.action";
 import { SearchParamsProps } from "@/types";
 import { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   authors: [
@@ -24,27 +25,32 @@ export const metadata: Metadata = {
 };
 
 const Community = async ({ searchParams }: SearchParamsProps) => {
+  const resolvedSearchParams = await searchParams;
   const { users, hasNext } = await getAllUsers({
-    searchQuery: searchParams.q,
-    filter: searchParams.filter,
-    page: searchParams.page ? +searchParams.page : 1,
+    searchQuery: resolvedSearchParams.q,
+    filter: resolvedSearchParams.filter,
+    page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
   });
   return (
     <>
       <h1 className="h1-bold text-dark100_light900">All Users</h1>
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchBar
-          route="/community"
-          iconPosition="left"
-          imgSrc="/qna/search.svg"
-          placeholder="Search user..."
-          otherClasses="flex-1"
-        />
-        <Filter
-          filters={UserFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-        />
+        <Suspense fallback={null}>
+          <LocalSearchBar
+            route="/community"
+            iconPosition="left"
+            imgSrc="/qna/search.svg"
+            placeholder="Search user..."
+            otherClasses="flex-1"
+          />
+        </Suspense>
+        <Suspense fallback={null}>
+          <Filter
+            filters={UserFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+          />
+        </Suspense>
       </div>
 
       {/* Users List */}
@@ -61,10 +67,12 @@ const Community = async ({ searchParams }: SearchParamsProps) => {
           </div>
         )}
       </section>
-      <Pagination
-        pageNumber={searchParams?.page ? +searchParams.page : 1}
-        hasNext={hasNext}
-      />
+      <Suspense fallback={null}>
+        <Pagination
+          pageNumber={resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
+          hasNext={hasNext}
+        />
+      </Suspense>
     </>
   );
 };

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlobalSearchFilters } from "@/constants/filters";
 import { formUrlQuery } from "@/lib/utils";
 
-const GlobalFilter = () => {
+const GlobalFilterContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const typeParams = searchParams.get("type");
@@ -55,6 +55,14 @@ const GlobalFilter = () => {
         ))}
       </div>
     </div>
+  );
+};
+
+const GlobalFilter = () => {
+  return (
+    <Suspense fallback={null}>
+      <GlobalFilterContent />
+    </Suspense>
   );
 };
 

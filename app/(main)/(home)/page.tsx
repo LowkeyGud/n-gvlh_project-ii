@@ -5,7 +5,7 @@ import AnswerTab from "@/components/shared/AnswerTab";
 import QuestionTab from "@/components/shared/QuestionTab";
 import { roobertSemibold } from "@/fonts";
 import { getDashboardCourses } from "@/lib/actions/course.action";
-import { getUserInfo } from "@/lib/actions/user.action";
+import { getUserInfo, syncClerkUser } from "@/lib/actions/user.action";
 import { auth } from "@clerk/nextjs/server";
 import DashboardSection from "./_components/dashboard-section";
 import EmptyDashboard from "./_components/empty-dashboard";
@@ -18,11 +18,14 @@ import EmptyDashboard from "./_components/empty-dashboard";
  * @returns JSX element representing the dashboard layout with user-specific data and sections.
  */
 export default async function Dashboard() {
-  const { userId: clerkId } = auth();
+  const { userId: clerkId } = await auth();
 
   if (!clerkId) {
     return redirect("/get-started");
   }
+
+   // Ensure the MongoDB user exists (self-heals if the Clerk webhook was missed)
+   await syncClerkUser();
 
    const { completedCourses, coursesInProgress, userDetail } =await getDashboardCourses(clerkId);
 
@@ -33,7 +36,7 @@ export default async function Dashboard() {
       <div
         className={`${roobertSemibold.className} text-pink2blue_yellow2pink pb-1 text-center text-4xl`}
       >
-        Welcome back, {userDetail.name}
+        Welcome back, {userDetail?.name ?? "Learner"}
       </div>
 
       <DashboardSection title="My Courses">

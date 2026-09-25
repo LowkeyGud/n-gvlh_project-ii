@@ -5,10 +5,10 @@ import { ReloadIcon } from "@radix-ui/react-icons";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import GlobalFilter from "./GlobalFilter";
 
-const GlobalResult = () => {
+const GlobalResultContent = () => {
   const searchParams = useSearchParams();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -120,6 +120,14 @@ const GlobalResult = () => {
         )}
       </div>
     </div>
+  );
+};
+
+const GlobalResult = () => {
+  return (
+    <Suspense fallback={null}>
+      <GlobalResultContent />
+    </Suspense>
   );
 };
 

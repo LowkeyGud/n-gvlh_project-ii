@@ -1,11 +1,11 @@
 import { SVGSkeleton } from "@/components/Skeleton";
 import { auth } from "@clerk/nextjs/server";
 
-const Loading = () => {
-  const { userId: clerkId } = auth();
+const Loading = async () => {
+  const { userId: clerkId } = await auth();
 
   if (!clerkId) {
-    return;
+    return null;
   }
 
   return (

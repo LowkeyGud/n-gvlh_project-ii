@@ -21,7 +21,7 @@ export const getChapterNameById = async ({
   chapterId: string;
 }) => {
   try {
-    connectToDatabase();
+    await connectToDatabase();
     const chapterName = await Chapter.findById(chapterId);
     return chapterName;
   } catch (error) {
@@ -35,7 +35,7 @@ export const getChapter = async ({
   chapterId,
 }: GetChapterProps) => {
   try {
-    connectToDatabase();
+    await connectToDatabase();
     // Fetch purchase
     const purchase = await Purchase.findOne({
       userId,
@@ -76,11 +76,16 @@ export const getChapter = async ({
         chapterId,
       });
 
-      try {
-        await video.assets.retrieve(muxData.assetId);
+      if (muxData?.assetId) {
+        try {
+          await video.assets.retrieve(muxData.assetId);
+          isDeleted = false;
+        } catch (error: any) {
+          isDeleted = true;
+        }
+      } else {
+        // youtube-only or no muxData -> not deleted, allow playback via youtubeUrl
         isDeleted = false;
-      } catch (error: any) {
-        isDeleted = true;
       }
       // if (is) {
       //   console.log("hello");

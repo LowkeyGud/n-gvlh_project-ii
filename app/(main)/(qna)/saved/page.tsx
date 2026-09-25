@@ -9,6 +9,7 @@ import { SearchParamsProps } from "@/types";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   authors: [
@@ -26,32 +27,37 @@ export const metadata: Metadata = {
 };
 
 const Collection = async ({ searchParams }: SearchParamsProps) => {
-  const { userId: clerkId } = auth();
+  const { userId: clerkId } = await auth();
+  const resolvedSearchParams = await searchParams;
 
   if (!clerkId) redirect("/get-started");
 
   const { questions, hasNext } = await getSavedQuestions({
     clerkId,
-    searchQuery: searchParams.q,
-    page: searchParams.page ? +searchParams.page : 1,
-    filter: searchParams.filter,
+    searchQuery: resolvedSearchParams.q,
+    page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
+    filter: resolvedSearchParams.filter,
   });
   return (
     <>
       <h1 className="h1-bold text-dark100_light900">Saved Questions</h1>
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchBar
-          route="/collection"
-          iconPosition="left"
-          imgSrc="/qna/search.svg"
-          placeholder="Search your saved questions..."
-          otherClasses="flex-1"
-        />
-        <Filter
-          filters={QuestionFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-        />
+        <Suspense fallback={null}>
+          <LocalSearchBar
+            route="/collection"
+            iconPosition="left"
+            imgSrc="/qna/search.svg"
+            placeholder="Search your saved questions..."
+            otherClasses="flex-1"
+          />
+        </Suspense>
+        <Suspense fallback={null}>
+          <Filter
+            filters={QuestionFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+          />
+        </Suspense>
       </div>
 
       {/* Users List */}
@@ -80,10 +86,12 @@ const Collection = async ({ searchParams }: SearchParamsProps) => {
           />
         )}
       </div>
-      <Pagination
-        pageNumber={searchParams?.page ? +searchParams.page : 1}
-        hasNext={hasNext}
-      />
+      <Suspense fallback={null}>
+        <Pagination
+          pageNumber={resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
+          hasNext={hasNext}
+        />
+      </Suspense>
     </>
   );
 };

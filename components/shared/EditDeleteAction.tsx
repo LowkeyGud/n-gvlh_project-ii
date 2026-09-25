@@ -5,7 +5,7 @@ import Image from "next/image";
 import { deleteQuestion } from "@/lib/actions/question.action";
 import { usePathname, useRouter } from "next/navigation";
 import { deleteAnswer } from "@/lib/actions/answer.action";
-import { toast } from "../ui/use-toast";
+import toast from "react-hot-toast";
 
 interface Props {
   type: string;
@@ -32,17 +32,13 @@ const EditDeleteAction = ({ type, itemId }: Props) => {
         // Delete Answer
         await deleteAnswer({ answerId: JSON.parse(itemId), path: pathname });
       }
-      return toast({
-        title: `${
-          type === "Question" ? "Question" : "Answer"
-        } deleted sucessfully`,
-      });
+      toast.success(
+        `${type === "Question" ? "Question" : "Answer"} deleted successfully`,
+      );
     } catch (error) {
-      // TODO! This toast doesn't show in error
-      return toast({
-        title: `${type === "Question" ? "Question" : "Answer"} deletion failed`,
-        variant: "destructive",
-      });
+      toast.error(
+        `${type === "Question" ? "Question" : "Answer"} deletion failed`,
+      );
     }
   };
 

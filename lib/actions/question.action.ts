@@ -6,7 +6,7 @@ import Interaction from "@/database/interaction.modal";
 import Question from "@/database/question.modal";
 import Tag from "@/database/tag.modal";
 import User from "@/database/user.modal";
-import mongoose, { FilterQuery } from "mongoose";
+import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { connectToDatabase } from "../mongoose";
 import {
@@ -21,11 +21,11 @@ import {
 
 export async function getQuestions(params: GetQuestionsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { searchQuery, filter, page = 1, pageSize = 10 } = params;
 
-    const query: FilterQuery<typeof Question> = {};
+    const query: mongoose.QueryFilter<typeof Question> = {};
 
     const skipAmount = (page - 1) * pageSize;
 
@@ -60,7 +60,8 @@ export async function getQuestions(params: GetQuestionsParams) {
       .populate({ path: "tags", model: Tag })
       .skip(skipAmount)
       .limit(pageSize)
-      .sort(sortOptions);
+      .sort(sortOptions)
+      .lean();
 
     const totalQuestions = await Question.countDocuments(query);
 
@@ -76,7 +77,7 @@ export async function getQuestions(params: GetQuestionsParams) {
 
 export async function getQuestionById(params: GetQuestionByIdParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { questionId } = params;
 
@@ -92,7 +93,8 @@ export async function getQuestionById(params: GetQuestionByIdParams) {
           model: Tag,
           select: "_id name",
         })
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
 
       return question;
     }
@@ -128,7 +130,8 @@ export async function getQuestionByIdAndIncreaseViews(
         model: Tag,
         select: "_id name",
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     if (!question) {
       return null; // Handle case where question is not found
@@ -142,11 +145,12 @@ export async function getQuestionByIdAndIncreaseViews(
 
 export async function getHotQuestions() {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const hotQuestions = await Question.find({})
       .sort({ views: -1, upvotes: -1 })
-      .limit(5);
+      .limit(5)
+      .lean();
 
     return hotQuestions;
   } catch (error) {
@@ -156,7 +160,7 @@ export async function getHotQuestions() {
 
 export async function createQuestion(params: CreateQuestionParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { title, content, tags, author, path } = params;
 
@@ -202,7 +206,7 @@ export async function createQuestion(params: CreateQuestionParams) {
 
 export async function upvoteQuestion(params: QuestionVoteParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { questionId, userId, hasupVoted, hasdownVoted, path } = params;
 
@@ -247,7 +251,7 @@ export async function upvoteQuestion(params: QuestionVoteParams) {
 
 export async function downvoteQuestion(params: QuestionVoteParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { questionId, userId, hasupVoted, hasdownVoted, path } = params;
 
@@ -291,7 +295,7 @@ export async function downvoteQuestion(params: QuestionVoteParams) {
 
 export async function deleteQuestion(params: DeleteQuestionParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { questionId, path } = params;
 
@@ -299,7 +303,7 @@ export async function deleteQuestion(params: DeleteQuestionParams) {
     await Answer.deleteMany({ question: questionId });
     await Interaction.deleteMany({ question: questionId });
     await Tag.updateMany(
-      { question: questionId },
+      { questions: questionId },
       { $pull: { questions: questionId } },
     );
 
@@ -311,7 +315,7 @@ export async function deleteQuestion(params: DeleteQuestionParams) {
 
 export async function editQuestion(params: EditQuestionParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { questionId, title, content, path } = params;
 
@@ -366,7 +370,40 @@ export async function getRecommendedQuestions(params: RecommendedParams) {
       ...new Set(userTags.map((tag: any) => tag._id)),
     ];
 
-    const query: FilterQuery<typeof Question> = {
+    // fallback for empty distinctUserTagIds → return hot questions instead of empty
+    if (!distinctUserTagIds.length) {
+      const hotQuery: mongoose.QueryFilter<typeof Question> = {
+        author: { $ne: user._id },
+      } as any;
+
+      if (searchQuery) {
+        (hotQuery as any).$or = [
+          { title: { $regex: searchQuery, $options: "i" } },
+          { content: { $regex: searchQuery, $options: "i" } },
+        ];
+      }
+
+      const totalHot = await Question.countDocuments(hotQuery);
+      const hotQuestions = await Question.find(hotQuery)
+        .populate({
+          path: "tags",
+          model: Tag,
+        })
+        .populate({
+          path: "author",
+          model: User,
+        })
+        .sort({ views: -1, upvotes: -1 })
+        .skip(skipAmount)
+        .limit(pageSize)
+        .lean();
+
+      const hasNextHot = totalHot > skipAmount + hotQuestions.length;
+
+      return { questions: hotQuestions, hasNext: hasNextHot };
+    }
+
+    const query: mongoose.QueryFilter<typeof Question> = {
       $and: [
         { tags: { $in: distinctUserTagIds } }, // Questions with user's tags
         { author: { $ne: user._id } }, // Exclude user's own questions
@@ -392,7 +429,8 @@ export async function getRecommendedQuestions(params: RecommendedParams) {
         model: User,
       })
       .skip(skipAmount)
-      .limit(pageSize);
+      .limit(pageSize)
+      .lean();
 
     const hasNext = totalQuestions > skipAmount + recommendedQuestions.length;
 

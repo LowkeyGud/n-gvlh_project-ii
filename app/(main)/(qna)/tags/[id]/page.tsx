@@ -4,12 +4,15 @@ import Pagination from "@/components/shared/Pagination";
 import LocalSearchBar from "@/components/shared/navbar/search/LocalSearchBar";
 import { getQuestionByTagId, getTagById } from "@/lib/actions/tag.action";
 import { URLProps } from "@/types";
+import { Suspense } from "react";
 
 const TagDetails = async ({ params, searchParams }: URLProps) => {
+  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
   const result = await getQuestionByTagId({
-    tagId: params.id,
-    page: searchParams.page ? +searchParams.page : 1,
-    searchQuery: searchParams.q,
+    tagId: id,
+    page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
+    searchQuery: resolvedSearchParams.q,
   });
 
   return (
@@ -17,13 +20,15 @@ const TagDetails = async ({ params, searchParams }: URLProps) => {
       <h1 className="h1-bold text-dark100_light900">{result?.tagTitle}</h1>
 
       <div className="mt-11 w-full">
-        <LocalSearchBar
-          route={`/tags/${params.id}`}
-          iconPosition="left"
-          imgSrc="/qna/search.svg"
-          placeholder="Search for questions"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={null}>
+          <LocalSearchBar
+            route={`/tags/${id}`}
+            iconPosition="left"
+            imgSrc="/qna/search.svg"
+            placeholder="Search for questions"
+            otherClasses="flex-1"
+          />
+        </Suspense>
       </div>
 
       <div className="mt-10 flex w-full flex-col gap-6">
@@ -50,16 +55,19 @@ const TagDetails = async ({ params, searchParams }: URLProps) => {
           />
         )}
       </div>
-      <Pagination
-        pageNumber={searchParams?.page ? +searchParams.page : 1}
-        hasNext={result?.hasNext || false}
-      />
+      <Suspense fallback={null}>
+        <Pagination
+          pageNumber={resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
+          hasNext={result?.hasNext || false}
+        />
+      </Suspense>
     </>
   );
 };
 
 export async function generateMetadata({ params }: URLProps) {
-  const tag = await getTagById({ tagId: params.id });
+  const { id } = await params;
+  const tag = await getTagById({ tagId: id });
 
   if (!tag) return;
 

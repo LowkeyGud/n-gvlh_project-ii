@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   },
 };
 
-const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const { userId } = auth();
-  const checkTeacher = isTeacher({ userId: userId });
+const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
+  const { userId } = await auth();
+  const checkTeacher = await isTeacher({ userId: userId });
   if (!checkTeacher) redirect("/get-started");
   return (
     <div>

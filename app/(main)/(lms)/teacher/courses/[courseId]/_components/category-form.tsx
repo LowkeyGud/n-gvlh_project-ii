@@ -47,7 +47,7 @@ export const CategoryForm = ({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      categoryId: initialData?.categoryId || "",
+      categoryId: initialData?.categoryId?.toString() || "",
     },
   });
 
@@ -66,7 +66,7 @@ export const CategoryForm = ({
 
   // Check if the course already has a selected option.
   const selectedOption = options.find(
-    (option) => option.value === initialData?.categoryId
+    (option) => option.value === initialData?.categoryId?.toString()
   );
 
   return (

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { formUrlQuery, removeKeysFromQuery } from "@/lib/utils";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 interface CustomInputProps {
   route: string;
@@ -14,7 +14,7 @@ interface CustomInputProps {
   otherClasses?: string;
 }
 
-const LocalSearchBar = ({
+const LocalSearchBarContent = ({
   route,
   iconPosition,
   imgSrc,
@@ -74,6 +74,14 @@ const LocalSearchBar = ({
         className="paragraph-regular text-dark200_light800 no-focus placeholder background-light800_darkgradient border-none shadow-none outline-none"
       />
     </div>
+  );
+};
+
+const LocalSearchBar = (props: CustomInputProps) => {
+  return (
+    <Suspense fallback={null}>
+      <LocalSearchBarContent {...props} />
+    </Suspense>
   );
 };
 

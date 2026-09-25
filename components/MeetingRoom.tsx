@@ -10,7 +10,7 @@ import {
 } from "@stream-io/video-react-sdk";
 import { LayoutList, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import Loader from "./Loader";
 import {
@@ -26,7 +26,18 @@ import EndCallButton from "./EndCallButton";
 
 type CallLayoutType = "grid" | "speaker-left" | "speaker-right";
 
-const MeetingRoom = () => {
+const CallLayout = ({ layout }: { layout: CallLayoutType }) => {
+  switch (layout) {
+    case "grid":
+      return <PaginatedGridLayout />;
+    case "speaker-right":
+      return <SpeakerLayout participantsBarPosition="left" />;
+    default:
+      return <SpeakerLayout participantsBarPosition="right" />;
+  }
+};
+
+const MeetingRoomContent = () => {
   const searchParams = useSearchParams();
   const isPersonalRoom = !!searchParams.get("personal");
   const router = useRouter();
@@ -39,29 +50,16 @@ const MeetingRoom = () => {
 
   if (callingState !== CallingState.JOINED) return <Loader />;
 
-  const CallLayout = () => {
-    switch (layout) {
-      case "grid":
-        return <PaginatedGridLayout />;
-      case "speaker-right":
-        return <SpeakerLayout participantsBarPosition="left" />;
-      default:
-        return <SpeakerLayout participantsBarPosition="right" />;
-    }
-  };
-
   return (
     <section className="text-meeting dark:bg-slate-900 relative w-full overflow-hidden pt-2">
       <div className="relative flex size-full items-center justify-center">
         <div className="flex size-full max-w-[1000px] items-center">
-          <CallLayout />
+          <CallLayout layout={layout} />
         </div>
         <div
           className={cn(
-            "fixed inset-y-0 ml-2 hidden pt-[92px] h-[calc(100vh)]",
-            {
-              "show-block": showParticipants,
-            },
+            "fixed inset-y-0 ml-2 pt-[92px] h-[calc(100vh)]",
+            showParticipants ? "block" : "hidden",
           )}
         >
           <CallParticipantsList onClose={() => setShowParticipants(false)} />
@@ -101,6 +99,14 @@ const MeetingRoom = () => {
         {!isPersonalRoom && <EndCallButton />}
       </div>
     </section>
+  );
+};
+
+const MeetingRoom = () => {
+  return (
+    <Suspense fallback={null}>
+      <MeetingRoomContent />
+    </Suspense>
   );
 };
 

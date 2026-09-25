@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input";
 import { formUrlQuery, removeKeysFromQuery } from "@/lib/utils";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import GlobalResult from "./GlobalResult";
 
-const GlobalSearch = () => {
+const GlobalSearchContent = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -92,6 +92,14 @@ const GlobalSearch = () => {
       </div>
       {isOpen && <GlobalResult />}
     </div>
+  );
+};
+
+const GlobalSearch = () => {
+  return (
+    <Suspense fallback={null}>
+      <GlobalSearchContent />
+    </Suspense>
   );
 };
 

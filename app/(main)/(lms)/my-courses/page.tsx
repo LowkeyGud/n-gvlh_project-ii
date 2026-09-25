@@ -8,7 +8,7 @@ import { getDashboardCourses } from "@/lib/actions/course.action";
 import { auth } from "@clerk/nextjs/server";
 
 export default async function Dashboard() {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return redirect("/get-started");

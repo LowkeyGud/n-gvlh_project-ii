@@ -77,8 +77,8 @@ const MeetingSetup = ({
       </div>
       <Button
         className="rounded-md bg-green-500 px-4 py-2.5"
-        onClick={() => {
-          call.join();
+        onClick={async () => {
+          await call.join();
 
           setIsSetupComplete(true);
         }}

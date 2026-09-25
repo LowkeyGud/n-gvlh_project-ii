@@ -12,17 +12,17 @@ import { ImageForm } from "./_components/image-form";
 import { MemberRoleForm } from "./_components/member-role-form";
 
 interface ProfileIdPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 const ProfileIdPage: React.FC<ProfileIdPageProps> = async ({ params }) => {
-  const admin = checkAdmin();
+  const admin = await checkAdmin();
   if (!admin) redirect("/not-found");
 
-  const { id } = params;
-  const { userId: currentUserId } = auth();
+  const { id } = await params;
+  const { userId: currentUserId } = await auth();
 
   if (!currentUserId) {
     return redirect("/get-started");
@@ -31,7 +31,7 @@ const ProfileIdPage: React.FC<ProfileIdPageProps> = async ({ params }) => {
   await connectToDatabase();
   const profile = await User.findOne({
     clerkId: id,
-  });
+  }).lean();
 
   if (!profile) {
     return redirect("/admin");
@@ -72,8 +72,8 @@ const ProfileIdPage: React.FC<ProfileIdPageProps> = async ({ params }) => {
                 <IconBadge icon={LayoutDashboard} />
                 <h2 className="text-xl font-medium">Customize your profile</h2>
               </div>
-              <ImageForm initialData={profile} id={params.id} />
-              <MemberRoleForm initialData={profile} id={params.id} />
+              <ImageForm initialData={profile} id={id} />
+              <MemberRoleForm initialData={profile} id={id} />
             </div>
           </div>
         </div>

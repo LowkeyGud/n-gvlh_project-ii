@@ -14,13 +14,13 @@ export const CourseSidebar = async ({
   course,
   progressCount,
 }: CourseSidebarProps) => {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return redirect("/sign-in");
   }
 
-  connectToDatabase();
+  await connectToDatabase();
   const purchase = await Purchase.findOne({
     userId,
     courseId: course._id,

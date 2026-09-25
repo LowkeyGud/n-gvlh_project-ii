@@ -115,7 +115,7 @@ const Votes = ({
       questionId: JSON.parse(itemId),
       userId: userId ? JSON.parse(userId) : undefined,
     });
-  }, [itemId, userId, pathname, router]);
+  }, [itemId, userId, pathname]);
 
   const [bookmarked, setBookmarked] = useState(false);
 

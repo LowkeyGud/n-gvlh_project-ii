@@ -4,6 +4,7 @@ import { getUserById } from "@/lib/actions/user.action";
 import { ParamsProps } from "@/types";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   authors: [
@@ -21,18 +22,18 @@ export const metadata: Metadata = {
 };
 
 const Edit = async ({ params }: ParamsProps) => {
-  const { userId } = auth();
+  const { userId } = await auth();
 
-  if (!userId) return null;
+  if (!userId) redirect("/sign-in");
 
+  const { id } = await params;
   const mongoUser = await getUserById({ userId });
-  const result = await getQuestionById({ questionId: params.id });
+  const result = await getQuestionById({ questionId: id });
 
   return (
     <>
       <h1 className="h1-bold text-dark100_light900">Edit Question</h1>
       <div className="mt-9">
-        {/* TODO! : Edit not working when (there is no changes are made)/Editor is not hovered */}
         <Question
           type="Edit"
           mongoUserId={JSON.stringify(mongoUser._id)}

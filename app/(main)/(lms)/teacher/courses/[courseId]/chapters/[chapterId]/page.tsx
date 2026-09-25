@@ -22,39 +22,37 @@ import { ChapterTitleForm } from "./_components/chapter-title-form";
 import { ChapterVideoForm } from "./_components/chapter-video-form";
 
 interface ChapterIdPageProps {
-  params: {
+  params: Promise<{
     courseId: string;
     chapterId: string;
-  };
+  }>;
 }
 
 const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
-  const { courseId, chapterId } = params;
-  const { userId } = auth();
+  const { courseId, chapterId } = await params;
+  const { userId } = await auth();
 
   if (!userId) {
     return redirect("/get-started");
   }
 
   // Find the chapter by chapterId and courseId
-  connectToDatabase();
-  const chapter = await Chapter.findOne({ _id: chapterId, courseId });
+  await connectToDatabase();
+  const chapter = await Chapter.findOne({ _id: chapterId, courseId }).lean();
 
   if (!chapter) {
     return redirect("/get-started");
   }
 
   // Find the related MuxData by chapterId
-  const muxData = await MuxData.findOne({ chapterId: chapterId });
+  const muxData = await MuxData.findOne({ chapterId: chapterId }).lean();
 
+  const totalFields = 3;
   const requiredFields = [
     chapter.title,
     chapter.description,
-    chapter.videoUrl,
-    chapter.youtubeUrl,
+    chapter.videoUrl || chapter.youtubeUrl,
   ];
-
-  const totalFields = 3;
   const completedFields = requiredFields.filter(Boolean).length;
 
   const completionText = `(${completedFields}/${totalFields})`;
@@ -79,7 +77,7 @@ const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
         <div className="flex items-center justify-between">
           <div className="w-full">
             <Link
-              href={`/teacher/courses/${params.courseId}`}
+              href={`/teacher/courses/${courseId}`}
               className="mb-6 flex items-center text-sm transition hover:opacity-75"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -96,8 +94,8 @@ const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
           </div>
           <ChapterActions
             disabled={!isComplete}
-            courseId={params.courseId}
-            chapterId={params.chapterId}
+            courseId={courseId}
+            chapterId={chapterId}
             isPublished={chapter.isPublished}
           />
         </div>
@@ -110,13 +108,13 @@ const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
               </div>
               <ChapterTitleForm
                 initialData={chapter}
-                courseId={params.courseId}
-                chapterId={params.chapterId}
+                courseId={courseId}
+                chapterId={chapterId}
               />
               <ChapterDescriptionForm
                 initialData={chapter}
-                courseId={params.courseId}
-                chapterId={params.chapterId}
+                courseId={courseId}
+                chapterId={chapterId}
               />
             </div>
             <div className="flex items-center gap-x-2">
@@ -125,8 +123,8 @@ const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
             </div>
             <ChapterAccessForm
               initialData={chapter}
-              courseId={params.courseId}
-              chapterId={params.chapterId}
+              courseId={courseId}
+              chapterId={chapterId}
             />
           </div>
           <div className="space-y-4">
@@ -137,8 +135,8 @@ const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
             <ChapterVideoForm
               muxData={muxData}
               chapterData={chapter}
-              courseId={params.courseId}
-              chapterId={params.chapterId}
+              courseId={courseId}
+              chapterId={chapterId}
             />
           </div>
         </div>
@@ -150,9 +148,10 @@ const ChapterIdPage: React.FC<ChapterIdPageProps> = async ({ params }) => {
 export async function generateMetadata({
   params,
 }: {
-  params: { chapterId: string };
+  params: Promise<{ chapterId: string }>;
 }) {
-  const chapter = await getChapterNameById({ chapterId: params.chapterId });
+  const { chapterId } = await params;
+  const chapter = await getChapterNameById({ chapterId });
 
   if (!chapter) return;
 

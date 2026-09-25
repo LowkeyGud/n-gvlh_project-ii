@@ -1,4 +1,4 @@
-import { CourseCard } from "@/components/course-card";
+import { CoursesList } from "@/components/courses-list";
 import AnswerTab from "@/components/shared/AnswerTab";
 import NoResult from "@/components/shared/NoResult";
 import ProfileLink from "@/components/shared/ProfileLink";
@@ -22,7 +22,9 @@ import Component from "../../announcement/_components/CustomCard";
 import FollowButton from "./_components/FollowButton";
 
 const Profile = async ({ params, searchParams }: URLProps) => {
-  const userInfo = await getUserInfo({ userId: params.id });
+  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
+  const userInfo = await getUserInfo({ userId: id });
   if (!userInfo) {
     return (
       <NoResult
@@ -33,23 +35,27 @@ const Profile = async ({ params, searchParams }: URLProps) => {
       />
     );
   }
-  const { userId: clerkId } = auth();
-  const teacher = await isProfileTeacher({ userId: params.id });
+  const { userId: clerkId } = await auth();
+  const teacher = await isProfileTeacher({ userId: id });
 
   let following, teacherAllCourses, teacherAnnouncements;
 
   if (teacher) {
-    following = await isFollowing({
-      teacherId: params.id,
-      studentId: clerkId,
-    });
+    following = clerkId
+      ? await isFollowing({
+          teacherId: id,
+          studentId: clerkId,
+        })
+      : false;
 
-    teacherAllCourses = await getTeacherCourses({
-      teacherId: params.id,
-      userId: clerkId!,
-    });
+    teacherAllCourses = clerkId
+      ? await getTeacherCourses({
+          teacherId: id,
+          userId: clerkId,
+        })
+      : [];
     teacherAnnouncements = await getTeacherAnnouncements({
-      teacherClerkId: params.id,
+      teacherClerkId: id,
     });
   }
 
@@ -115,7 +121,7 @@ const Profile = async ({ params, searchParams }: URLProps) => {
           </SignedIn>
           {teacher && (
             <FollowButton
-              studentId={clerkId!}
+              studentId={clerkId ?? ""}
               teacherClerkId={userInfo.user.clerkId}
               following={following!}
             />
@@ -157,7 +163,7 @@ const Profile = async ({ params, searchParams }: URLProps) => {
           className="tab-content mt-5 flex w-full flex-col gap-6 max-sm:pt-16"
         >
           <QuestionTab
-            searchParams={searchParams}
+            searchParams={resolvedSearchParams}
             userId={userInfo.user._id}
             clerkId={clerkId!}
           />
@@ -167,7 +173,7 @@ const Profile = async ({ params, searchParams }: URLProps) => {
           className="tab-content mt-1 flex w-full flex-col gap-6"
         >
           <AnswerTab
-            searchParams={searchParams}
+            searchParams={resolvedSearchParams}
             userId={userInfo.user._id}
             clerkId={clerkId!}
           />
@@ -177,23 +183,7 @@ const Profile = async ({ params, searchParams }: URLProps) => {
             value="courses"
             className="tab-content flex w-full flex-col gap-6"
           >
-            {/* TODO : CourseList can be used here but a new prop should be added to override below div properties */}
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
-              {teacherAllCourses!.length !== 0 &&
-                teacherAllCourses?.map((item) => (
-                  <CourseCard
-                    key={item._id}
-                    id={item._id}
-                    creatorId={item.userId}
-                    title={item.title}
-                    imageUrl={item.imageUrl!}
-                    chaptersLength={item.chapters.length}
-                    price={item.price!}
-                    progress={item.progress}
-                    category={item?.category?.name!}
-                  />
-                ))}
-            </div>
+            <CoursesList items={(teacherAllCourses as any) ?? []} small />
           </TabsContent>
         )}
         {teacher && (
@@ -224,7 +214,8 @@ const Profile = async ({ params, searchParams }: URLProps) => {
 };
 
 export async function generateMetadata({ params }: URLProps) {
-  const userInfo = await getUserInfo({ userId: params.id });
+  const { id } = await params;
+  const userInfo = await getUserInfo({ userId: id });
 
   if (!userInfo) return;
 

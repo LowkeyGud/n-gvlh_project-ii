@@ -17,7 +17,7 @@ import Component from "./_components/CustomCard";
 // );
 
 const NewIssuePage = async () => {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) redirect("/get-started");
 
   const announcements = await getStudentAnnouncements({ studentId: userId });
@@ -65,8 +65,6 @@ const NewIssuePage = async () => {
       </div>
     </div>
   );
-
-  return;
 };
 
 export default NewIssuePage;

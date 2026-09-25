@@ -4,11 +4,14 @@ import Answer from "@/database/answer.modal";
 import Question from "@/database/question.modal";
 import Tag from "@/database/tag.modal";
 import User from "@/database/user.modal";
+import Interaction from "@/database/interaction.modal";
+import Forum from "@/database/forum.modal";
 import { BadgeCriteriaType } from "@/types";
-import { FilterQuery } from "mongoose";
+import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { connectToDatabase } from "../mongoose";
 import { assignBadges } from "../utils";
+import { currentUser } from "@clerk/nextjs/server";
 import {
   CreateUserParams,
   DeleteUserParams,
@@ -27,7 +30,7 @@ export async function getAllUsers(params: GetAllUsersParams) {
 
     const { page = 1, pageSize = 10, filter, searchQuery } = params;
 
-    const query: FilterQuery<typeof User> = {};
+    const query: mongoose.QueryFilter<typeof User> = {};
 
     const skipAmount = (page - 1) * pageSize;
 
@@ -89,7 +92,7 @@ export async function getUserById(params: any) {
 
 export async function createUser(userData: CreateUserParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const newUser = await User.create(userData);
 
@@ -99,9 +102,63 @@ export async function createUser(userData: CreateUserParams) {
   }
 }
 
+/**
+ * Self-healing sync between Clerk and MongoDB. Creates the MongoDB user
+ * record if it does not exist yet (e.g. the Clerk `user.created` webhook
+ * was not delivered in local development). Safe to call on every request.
+ */
+export async function syncClerkUser() {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) return null;
+
+    await connectToDatabase();
+
+    const { id, firstName, lastName, imageUrl, username, emailAddresses } =
+      clerkUser;
+    const email = emailAddresses[0]?.emailAddress ?? "";
+    const name =
+      [firstName, lastName].filter(Boolean).join(" ") ||
+      email.split("@")[0] ||
+      "New User";
+
+    const existingUser = await User.findOne({ clerkId: id });
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const fallbackUsername = username || email.split("@")[0] || id;
+
+    try {
+      return await User.create({
+        clerkId: id,
+        name,
+        username: fallbackUsername,
+        email,
+        picture: imageUrl,
+      });
+    } catch (error: any) {
+      // Duplicate key (username/email already taken) — retry with a unique suffix
+      if (error?.code === 11000) {
+        return await User.create({
+          clerkId: id,
+          name,
+          username: `${fallbackUsername}-${id.slice(-6)}`,
+          email: email || `${id}@users.noreply.clerk.dev`,
+          picture: imageUrl,
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.log("[SYNC_CLERK_USER]: ", error);
+    return null;
+  }
+}
+
 export async function updateUser(params: UpdateUserParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { clerkId, updateData, path } = params;
 
@@ -117,7 +174,7 @@ export async function updateUser(params: UpdateUserParams) {
 
 export async function deleteUser(params: DeleteUserParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { clerkId } = params;
 
@@ -127,16 +184,24 @@ export async function deleteUser(params: DeleteUserParams) {
       throw new Error("User not found!");
     }
 
-    // TODO => Get user question id to delete them
+    // Collect user's question IDs to clean Tag references
+    const userQuestionIds = await Question.distinct("_id", { author: user._id });
 
-    // Delete User Questions
+    // Delete all user-related data
     await Question.deleteMany({ author: user._id });
+    await Answer.deleteMany({ author: user._id });
+    await Interaction.deleteMany({ user: user._id });
+    await Forum.deleteMany({ teacherId: user._id });
 
-    // TODO! => delete user answers, comments, etc
+    // Clean up Tag references to deleted questions
+    if (userQuestionIds.length > 0) {
+      await Tag.updateMany(
+        { questions: { $in: userQuestionIds } },
+        { $pull: { questions: { $in: userQuestionIds } } },
+      );
+    }
 
-    const deletedUser = await User.findByIdAndDelete(user._id);
-
-    return deletedUser;
+    return user;
   } catch (error) {
     console.log(error);
   }
@@ -144,7 +209,7 @@ export async function deleteUser(params: DeleteUserParams) {
 
 export async function toggleSaveQuestion(params: ToggleSaveQuestionParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId, questionId, path } = params;
 
@@ -181,13 +246,13 @@ export async function toggleSaveQuestion(params: ToggleSaveQuestionParams) {
 
 export async function getSavedQuestions(params: GetSavedQuestionsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { clerkId, searchQuery, filter, page = 1, pageSize = 10 } = params;
 
     const skipAmount = (page - 1) * pageSize;
 
-    const query: FilterQuery<typeof Question> = searchQuery
+    const query: mongoose.QueryFilter<typeof Question> = searchQuery
       ? { title: { $regex: new RegExp(searchQuery, "i") } }
       : {};
 
@@ -251,7 +316,7 @@ export async function getSavedQuestions(params: GetSavedQuestionsParams) {
 
 export async function getUserInfo(params: GetUserByIdParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId } = params;
 
@@ -294,7 +359,7 @@ export async function getUserInfo(params: GetUserByIdParams) {
         },
       },
     ]);
-    const [questionViews] = await Answer.aggregate([
+    const [questionViews] = await Question.aggregate([
       { $match: { author: user._id } },
       {
         $group: {
@@ -338,7 +403,7 @@ export async function getUserInfo(params: GetUserByIdParams) {
 
 export async function getUserQuestions(params: GetUserStatsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId, page = 1, pageSize = 10 } = params;
 
@@ -363,7 +428,7 @@ export async function getUserQuestions(params: GetUserStatsParams) {
 
 export async function getUserAnswers(params: GetUserStatsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId, page = 1, pageSize = 10 } = params;
 
@@ -400,7 +465,7 @@ export async function changeRole({
       throw new Error("Invalid role specified.");
     }
 
-    connectToDatabase()
+    await connectToDatabase();
 
     // Find the user by ID and update the role
     const user = await User.findOneAndUpdate(

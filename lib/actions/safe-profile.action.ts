@@ -8,20 +8,20 @@ import { connectToDatabase } from "../mongoose";
 
 export default async function getSafeProfile() {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
-      return redirect("/get-started");
+      redirect("/get-started");
     }
 
-    connectToDatabase();
+    await connectToDatabase();
     const currentProfile = await User.findOne(
-      { userId },
+      { clerkId: userId },
       {
         _id: 1,
-        userId: 1,
+        clerkId: 1,
         name: 1,
-        imageUrl: 1,
+        picture: 1,
         email: 1,
         role: 1,
         createdAt: 1,
@@ -35,7 +35,7 @@ export default async function getSafeProfile() {
 
     // Convert createdAt and updatedAt to ISO strings
     const safeProfile: SafeProfile = {
-      ...currentProfile,
+      ...currentProfile.toObject(),
       createdAt: currentProfile.createdAt.toISOString(),
       updatedAt: currentProfile.updatedAt.toISOString(),
     };

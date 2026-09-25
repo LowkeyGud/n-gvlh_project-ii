@@ -4,6 +4,7 @@ import { getTimestamp } from "@/lib/utils";
 import { SignedIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import EditDeleteAction from "./EditDeleteAction";
 import Filter from "./Filter";
 import Pagination from "./Pagination";
@@ -37,7 +38,9 @@ const AllAnswers = async ({
       <div className="flex items-center justify-between">
         <h3 className="primary-text-gradient">{totalAnswers} Answers</h3>
 
-        <Filter filters={AnswerFilters} />
+        <Suspense fallback={null}>
+          <Filter filters={AnswerFilters} />
+        </Suspense>
       </div>
 
       <div>
@@ -90,7 +93,9 @@ const AllAnswers = async ({
           </article>
         ))}
       </div>
-      <Pagination pageNumber={page ? +page : 1} hasNext={hasNext} />
+      <Suspense fallback={null}>
+        <Pagination pageNumber={page ? +page : 1} hasNext={hasNext} />
+      </Suspense>
     </div>
   );
 };

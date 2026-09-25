@@ -26,6 +26,9 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { toast } from "../ui/use-toast";
 
+// NOTE: TinyMCE init below duplicates config from components/editor.tsx (skin & content_css dark/default handling).
+// Both were fixed together to ensure same content_css fix. Keep in sync or extract to shared lib/tinymce-config.ts.
+
 interface Props {
   type?: string;
   mongoUserId: string;
@@ -43,14 +46,16 @@ const Question = ({ mongoUserId, type, questionDetails }: Props) => {
 
   const parsedQuestionDetails =
     questionDetails && JSON.parse(questionDetails || "");
-  const groupTags = parsedQuestionDetails?.tags.map((tag: ITag) => tag.name);
+  const groupTags =
+    parsedQuestionDetails?.tags?.map((tag: ITag) => tag.name) || [];
 
-  // Form Definition
+  // Form Definition - includes explanation so edit works without hovering editor
   const form = useForm<z.infer<typeof QuestionsSchema>>({
     resolver: zodResolver(QuestionsSchema),
     defaultValues: {
-      title: parsedQuestionDetails?.title,
-      tags: groupTags || [],
+      title: parsedQuestionDetails?.title || "",
+      explanation: parsedQuestionDetails?.content || "",
+      tags: groupTags,
     },
   });
 
@@ -213,7 +218,7 @@ const Question = ({ mongoUserId, type, questionDetails }: Props) => {
                     height: 350,
                     menubar: false,
                     skin: mode === "dark" ? "oxide-dark" : "oxide",
-                    content_css: mode,
+                    content_css: mode === "dark" ? "dark" : "default",
                     plugins: [
                       "advlist",
                       "autolink",

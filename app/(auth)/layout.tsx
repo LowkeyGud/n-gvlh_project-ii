@@ -47,7 +47,7 @@ export const metadata: Metadata = {
 };
 const AuthLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="flex h-full min-h-screen items-center justify-center bg-black">
       <Starfield
         starCount={1000}
         starColor={[255, 23, 30]}

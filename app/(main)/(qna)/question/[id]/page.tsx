@@ -17,7 +17,9 @@ import Image from "next/image";
 import Link from "next/link";
 
 const QuestionDetailPage = async ({ params, searchParams }: any) => {
-  const { userId: clerkId } = auth();
+  const { userId: clerkId } = await auth();
+  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
 
   let mongoUser;
 
@@ -25,7 +27,7 @@ const QuestionDetailPage = async ({ params, searchParams }: any) => {
     mongoUser = await getUserById({ userId: clerkId });
   }
   const question = await getQuestionByIdAndIncreaseViews({
-    questionId: params.id,
+    questionId: id,
   });
 
   if (!question) {
@@ -65,10 +67,10 @@ const QuestionDetailPage = async ({ params, searchParams }: any) => {
               itemId={JSON.stringify(question._id)}
               userId={JSON.stringify(mongoUser?._id)}
               upvotes={question.upvotes.length}
-              hasupVoted={question.upvotes.includes(mongoUser._id)}
+              hasupVoted={!!mongoUser && question.upvotes.includes(mongoUser._id)}
               downvotes={question.downvotes.length}
-              hasdownVoted={question.downvotes.includes(mongoUser._id)}
-              hasSaved={mongoUser?.saved.includes(question._id)}
+              hasdownVoted={!!mongoUser && question.downvotes.includes(mongoUser._id)}
+              hasSaved={!!mongoUser && mongoUser.saved.includes(question._id)}
             />
           </div>
         </div>
@@ -121,10 +123,10 @@ const QuestionDetailPage = async ({ params, searchParams }: any) => {
 
       <AllAnswers
         questionId={question._id}
-        userId={mongoUser._id}
+        userId={mongoUser?._id}
         totalAnswers={question.answers.length}
-        filter={searchParams.filter}
-        page={searchParams?.page}
+        filter={resolvedSearchParams.filter}
+        page={resolvedSearchParams?.page}
       />
 
       {/* Just Giving a height like flutter sizedbox😝 */}
@@ -134,15 +136,16 @@ const QuestionDetailPage = async ({ params, searchParams }: any) => {
       <Answer
         question={question.content}
         questionId={JSON.stringify(question._id)}
-        authorId={JSON.stringify(mongoUser._id)}
+        authorId={JSON.stringify(mongoUser?._id)}
       />
     </>
   );
 };
 
 export async function generateMetadata({ params }: URLProps) {
+  const { id } = await params;
   const question = await getQuestionById({
-    questionId: params.id,
+    questionId: id,
   });
 
   if (!question) return;

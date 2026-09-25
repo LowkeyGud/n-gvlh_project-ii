@@ -56,12 +56,14 @@ const CourseLayout = async ({
   params,
 }: {
   children: React.ReactNode;
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }) => {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) {
     return redirect("/get-started");
   }
+
+  const { courseId } = await params;
 
   // const safeProfile = await getSafeProfile();
 
@@ -70,7 +72,7 @@ const CourseLayout = async ({
   // }
 
   const course = await getCourseWithChaptersAndProgress(
-    params.courseId,
+    courseId,
     userId,
   );
 
@@ -79,7 +81,7 @@ const CourseLayout = async ({
   }
 
   // @ts-ignore
-  const progressCount: number = await getProgress(userId, params.courseId);
+  const progressCount: number = await getProgress(userId, courseId);
 
   return (
     <div className="h-full">

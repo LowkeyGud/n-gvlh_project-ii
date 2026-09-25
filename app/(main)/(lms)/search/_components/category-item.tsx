@@ -7,6 +7,7 @@ import {
 } from "next/navigation";
 import qs from "query-string";
 import { IconType } from "react-icons";
+import { Suspense } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -16,7 +17,7 @@ interface CategoryItemProps {
   icon?: IconType;
 };
 
-export const CategoryItem = ({
+const CategoryItemContent = ({
   label,
   value,
   icon: Icon,
@@ -56,5 +57,13 @@ export const CategoryItem = ({
         {label}
       </div>
     </button>
+  )
+}
+
+export const CategoryItem = (props: CategoryItemProps) => {
+  return (
+    <Suspense fallback={null}>
+      <CategoryItemContent {...props} />
+    </Suspense>
   )
 }

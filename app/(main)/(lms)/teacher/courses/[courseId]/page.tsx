@@ -23,23 +23,35 @@ import { DescriptionForm } from "./_components/description-form";
 import { ImageForm } from "./_components/image-form";
 import PriceForm from "./_components/price-form";
 
-const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
-  const { userId } = auth();
+const CourseIdPage = async ({
+  params,
+}: {
+  params: Promise<{ courseId: string }>;
+}) => {
+  const { userId } = await auth();
 
   if (!userId) {
     return redirect("/get-started");
   }
 
-  connectToDatabase();
-  const course = await Course.findOne({ _id: params.courseId, userId });
+  const { courseId } = await params;
+
+  await connectToDatabase();
+  const course = await Course.findOne({ _id: courseId, userId }).lean();
+
+  if (!course) {
+    return redirect("/get-started");
+  }
 
   const attachments = await Attachment.find({ courseId: course._id })
     .sort({ createdAt: "desc" })
     .exec();
 
-  const chapters = await Chapter.find({ courseId: course._id }).sort({
-    position: "asc",
-  });
+  const chapters = await Chapter.find({ courseId: course._id })
+    .sort({
+      position: "asc",
+    })
+    .lean();
 
   const attachmentsObject = attachments.map((element) => ({
     _id: element._id,
@@ -49,10 +61,6 @@ const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
   }));
 
   const categories = await Category.find().sort({ name: 1 });
-
-  if (!course) {
-    return redirect("/get-started");
-  }
 
   const requiredFields = [
     course.title,
@@ -85,7 +93,7 @@ const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
             </div>
             <Actions
               disabled={!isComplete}
-              courseId={params.courseId}
+              courseId={courseId}
               isPublished={course.isPublished}
             />
           </div>
@@ -95,15 +103,15 @@ const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
                 <IconBadge icon={LayoutDashboard} />
                 <h2 className="text-xl">Customize your course</h2>
               </div>
-              <TitleForm initialData={course} courseId={course.id} />
-              <DescriptionForm initialData={course} courseId={course.id} />
-              <ImageForm initialData={course} courseId={course.id} />
+              <TitleForm initialData={course} courseId={course._id.toString()} />
+              <DescriptionForm initialData={course} courseId={course._id.toString()} />
+              <ImageForm initialData={course} courseId={course._id.toString()} />
               <CategoryForm
                 initialData={course}
-                courseId={course.id}
+                courseId={course._id.toString()}
                 options={categories.map((category) => ({
                   label: category.name,
-                  value: category._id,
+                  value: category._id.toString(),
                 }))}
               />
             </div>
@@ -113,14 +121,14 @@ const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
                   <IconBadge icon={ListChecks} />
                   <h2 className="text-xl">Course chapters</h2>
                 </div>
-                <ChaptersForm initialData={chapters} courseId={course.id} />
+                <ChaptersForm initialData={chapters} courseId={course._id.toString()} />
               </div>
               <div>
                 <div className="flex items-center gap-x-2">
                   <IconBadge icon={CircleDollarSign} />
                   <h2 className="text-xl">Sell your course</h2>
                 </div>
-                <PriceForm initialData={course} courseId={course.id} />
+                <PriceForm initialData={course} courseId={course._id.toString()} />
               </div>
               <div>
                 <div className="flex items-center gap-x-2">
@@ -129,7 +137,7 @@ const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
                 </div>
                 <AttachmentForm
                   attachments={attachmentsObject}
-                  courseId={course.id}
+                  courseId={course._id.toString()}
                 />
               </div>
             </div>
@@ -143,9 +151,10 @@ const CourseIdPage = async ({ params }: { params: { courseId: string } }) => {
 export async function generateMetadata({
   params,
 }: {
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }) {
-  const course = await getCourseNameById({ courseId: params.courseId });
+  const { courseId } = await params;
+  const course = await getCourseNameById({ courseId });
 
   if (!course) return;
 

@@ -1,3 +1,5 @@
+"use client";
+
 // context/MyContext.tsx
 import { isTeacher } from "@/lib/actions/user.action";
 import { useAuth } from "@clerk/nextjs";

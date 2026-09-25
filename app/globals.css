@@ -1,7 +1,9 @@
+@import url("../styles/theme.css");
+@import "@uploadthing/react/styles.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url("../styles/theme.css");
 
 html,
 body,
@@ -358,7 +360,6 @@ code {
 /* ==== clerk class override ===== */
 
 .cl-cardBox {
-  background-color: #fff;
   box-shadow: 5px -5px 400px 10px rgb(133, 68, 189);
 }
 
@@ -404,4 +405,3 @@ code {
   }
 }
 
-@import "~@uploadthing/react/styles.css";

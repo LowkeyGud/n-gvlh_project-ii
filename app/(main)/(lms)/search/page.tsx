@@ -6,6 +6,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { Categories } from "./_components/categories";
 
 export const metadata: Metadata = {
@@ -27,34 +28,42 @@ export const metadata: Metadata = {
 };
 
 interface SearchPageProps {
-  searchParams: {
+  searchParams: Promise<{
     title: string;
     categoryId: string;
-  };
+  }>;
 }
 
 const SearchPage = async ({ searchParams }: SearchPageProps) => {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return redirect("/get-started");
   }
 
-  connectToDatabase();
-  const categories = await Category.find().sort({ name: 1 });
+  const { title, categoryId } = await searchParams;
+
+  await connectToDatabase();
+  // Use lean() to return plain objects for serialization (consistent with course.action lean() pattern)
+  const categories = await Category.find().sort({ name: 1 }).lean();
 
   const courses = await getCourses({
     userId,
-    ...searchParams,
+    title,
+    categoryId,
   });
 
   return (
     <>
       <div className="block px-6 pt-6 md:mb-0 md:hidden">
-        <SearchInput />
+        <Suspense fallback={null}>
+          <SearchInput />
+        </Suspense>
       </div>
       <div className="space-y-4 p-6">
-        <Categories items={categories} />
+        <Suspense fallback={null}>
+          <Categories items={categories} />
+        </Suspense>
         <CoursesList items={courses} />
       </div>
     </>

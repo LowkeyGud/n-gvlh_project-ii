@@ -2,15 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { addAnnouncement } from "@/lib/actions/forum.action";
+import { Editor } from "@/components/editor";
 import { useAuth } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Callout, TextField } from "@radix-ui/themes";
-import "easymde/dist/easymde.min.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { AiOutlineInfoCircle } from "react-icons/ai";
-import SimpleMdeReact from "react-simplemde-editor";
 import z from "zod";
 
 const announcementSchema = z.object({
@@ -61,18 +60,16 @@ const AnnouncementForm = ({ announcement }: { announcement?: string }) => {
         </Callout.Root>
       )}
       <form className="max-w-3xl space-y-3" onSubmit={onSubmit}>
-        <TextField.Root>
-          <TextField.Input
-            className="bg-meeting text-meeting h-10 w-full rounded-sm p-3"
-            placeholder="Announcement Title"
-            {...register("title")}
-          />
-        </TextField.Root>
+        <TextField.Root
+          className="bg-meeting text-meeting h-10 w-full rounded-sm p-3"
+          placeholder="Announcement Title"
+          {...register("title")}
+        />
         <Controller
           name="description"
           control={control}
           render={({ field }) => (
-            <SimpleMdeReact placeholder="Announcement Description" {...field} />
+            <Editor value={field.value || ""} onChange={field.onChange} />
           )}
         />
         <Button variant="pink2blue" className="text-white">

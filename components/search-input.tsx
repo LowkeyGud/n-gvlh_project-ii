@@ -3,16 +3,16 @@
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Search } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import qs from "query-string";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
-export const SearchInput = () => {
+const SearchInputContent = () => {
 
     const [value, setValue] = useState("");
     const debouncedValue = useDebounce(value, 500);
 
-    const searchParams = new URLSearchParams();
+    const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -39,5 +39,13 @@ export const SearchInput = () => {
                 placeholder="Search for courses"
             />
         </div>
+    )
+}
+
+export const SearchInput = () => {
+    return (
+        <Suspense fallback={null}>
+            <SearchInputContent />
+        </Suspense>
     )
 }

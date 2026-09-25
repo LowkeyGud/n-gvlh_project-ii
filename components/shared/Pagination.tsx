@@ -2,6 +2,7 @@
 
 import { formUrlQuery } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "../ui/button";
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
   hasNext: boolean;
 }
 
-const Pagination = ({ pageNumber, hasNext }: Props) => {
+const PaginationContent = ({ pageNumber, hasNext }: Props) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -53,6 +54,14 @@ const Pagination = ({ pageNumber, hasNext }: Props) => {
         <p className="body-medium">Next</p>
       </Button>
     </div>
+  );
+};
+
+const Pagination = (props: Props) => {
+  return (
+    <Suspense fallback={null}>
+      <PaginationContent {...props} />
+    </Suspense>
   );
 };
 

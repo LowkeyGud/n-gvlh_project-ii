@@ -63,7 +63,6 @@ const CallList = ({ type }: { type: "ended" | "upcoming" | "recordings" }) => {
     if (type === "recordings") {
       fetchRecordings();
     }
-    // TODO: npm run build was crying about toast not being present in depedency aaray of useEffect
   }, [type, callRecordings, toast]);
 
   if (isLoading) return <Loader />;

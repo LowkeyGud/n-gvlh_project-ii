@@ -14,6 +14,7 @@ import { SearchParamsProps } from "@/types";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   authors: [
@@ -63,14 +64,15 @@ export const metadata: Metadata = {
 
 export default async function Home({ searchParams }: SearchParamsProps) {
   let result;
+  const resolvedSearchParams = await searchParams;
 
-  const { userId } = auth();
-  if (searchParams?.filter === "recommended") {
+  const { userId } = await auth();
+  if (resolvedSearchParams?.filter === "recommended") {
     if (userId) {
       result = await getRecommendedQuestions({
         userId,
-        searchQuery: searchParams.q,
-        page: searchParams.page ? +searchParams.page : 1,
+        searchQuery: resolvedSearchParams.q,
+        page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
       });
     } else {
       result = {
@@ -80,9 +82,9 @@ export default async function Home({ searchParams }: SearchParamsProps) {
     }
   } else {
     result = await getQuestions({
-      searchQuery: searchParams.q,
-      filter: searchParams.filter,
-      page: searchParams.page ? +searchParams.page : 1,
+      searchQuery: resolvedSearchParams.q,
+      filter: resolvedSearchParams.filter,
+      page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
     });
   }
 
@@ -99,22 +101,28 @@ export default async function Home({ searchParams }: SearchParamsProps) {
       </div>
 
       <div className="mt-3 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchBar
-          route="/"
-          iconPosition="left"
-          imgSrc="/qna/search.svg"
-          placeholder="Search for questions"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={null}>
+          <LocalSearchBar
+            route="/"
+            iconPosition="left"
+            imgSrc="/qna/search.svg"
+            placeholder="Search for questions"
+            otherClasses="flex-1"
+          />
+        </Suspense>
         {/* Mobile HomeFilter */}
-        <Filter
-          filters={HomePageFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-          containerClasses="hidden max-md:flex"
-        />
+        <Suspense fallback={null}>
+          <Filter
+            filters={HomePageFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+            containerClasses="hidden max-md:flex"
+          />
+        </Suspense>
       </div>
 
-      <HomeFilters />
+      <Suspense fallback={null}>
+        <HomeFilters />
+      </Suspense>
       <div className="mt-2 flex w-full flex-col gap-6">
         {result?.questions.length && result.questions.length > 0 ? (
           result?.questions.map((question) => (
@@ -139,10 +147,12 @@ export default async function Home({ searchParams }: SearchParamsProps) {
           />
         )}
       </div>
-      <Pagination
-        pageNumber={searchParams?.page ? +searchParams.page : 1}
-        hasNext={result?.hasNext}
-      />
+      <Suspense fallback={null}>
+        <Pagination
+          pageNumber={resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
+          hasNext={result?.hasNext}
+        />
+      </Suspense>
     </>
   );
 }
