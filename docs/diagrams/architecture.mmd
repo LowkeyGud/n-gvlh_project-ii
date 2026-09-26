@@ -1,0 +1,12 @@
+%%{init: {"theme": "default"}}%%
+flowchart TD
+  LAND["Landing + get-started"] --> SHELL["Authenticated shell<br/>proxy.ts guard"]
+  SHELL --> LMS["LMS: courses + studio<br/>Mux lessons + Stripe"]
+  SHELL --> MEET["Meetings: rooms + history<br/>+ personal room"]
+  SHELL --> QNA["QnA: ask answer tags<br/>saves follows"]
+  LMS & MEET & QNA --> ACT["14 server actions<br/>ADMIN_ID role checks"]
+  ACT --> DB[("MongoDB 15 models")]
+  ACT --> PAY["Stripe"]
+  ACT --> VID["Mux + Stream"]
+  ACT --> AI["Gemini drafts"]
+  ACT --> FILES["UploadThing"]

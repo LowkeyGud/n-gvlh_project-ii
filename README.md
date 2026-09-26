@@ -1,362 +1,126 @@
+# N-GVLH
 
-<h2 align="center">N-GVLH</h2>
+> One login for three classrooms: video courses with Stripe enrollment, Stream live meetings, and a Gemini-assisted Q&A community.
 
-<p align="center">
-  Empowering learning through interactive video courses and a vibrant community.
-</p>
+**Stack:** Next.js 16 · React 19 · Clerk + `proxy.ts` guard · Mongoose/MongoDB (15 models) · Stripe · Mux · Stream · UploadThing · Gemini
 
-<br>
+![N-GVLH dashboard with courses, meetings, and Q&A](docs/screenshots/ngvlh-dashboard.png)
 
-**🚀  What is N-GVLH?**
+| Fact | Evidence |
+| --- | --- |
+| Three products, one shell | `(main)/(lms)` + `(meetings)` + `(qna)` route groups behind `proxy.ts` `auth.protect()` |
+| 15 collections, 14 action modules | `database/*.modal.ts` + `lib/actions/` spanning courses, questions, meetings, purchases |
+| Role-gated server actions | `ADMIN_ID_1/2` authorization in the actions layer; no `route.ts` API files |
+| Marketing site included | Landing assets (`landing1/2`, illustrations, fonts) + `get-started` route |
 
-N-GVLH is an innovative educational platform designed to connect students and teachers in a dynamic and engaging learning environment.
+## The Problem
 
-* **Interactive Video Courses:** Explore a wide range of courses taught by experienced educators, featuring interactive video lessons that bring learning to life.
+Running courses, live classes, announcements, and Q&A usually means three disconnected tools with three logins. Learners lose context at every switch; teachers repeat answers across channels.
 
-* **Live Video Calling:** Connect directly with your teachers through interactive video calls for personalized support and real-time Q&A sessions.
+## The Solution
 
-* **Teacher Announcements:** Stay informed about important updates, course news, and upcoming events through dedicated teacher announcement pages.
+Route groups over centralized server actions: the LMS serves Mux/YouTube lessons with Stripe enrollment and progress confetti; Meetings serve Stream rooms with history and personal rooms; Q&A serves Markdown/code questions with votes, saves, follows, and Gemini-drafted answers. Clerk identity plus admin-ID checks gate every action; Mongo persists all three domains.
 
-* **Personalized Learning:** Follow your favorite teachers to receive tailored announcements and stay up-to-date on their latest offerings.
+```mermaid
+graph TD
+  Land[landing + get-started] --> Shell[authenticated shell<br/>proxy.ts guard]
+  Shell --> LMS[courses + teacher studio<br/>Mux lessons + Stripe + progress]
+  Shell --> Meet[meetings dashboard + history<br/>+ personal room + recordings]
+  Shell --> QnA[ask + question + tags + users<br/>+ saved + announcements]
+  LMS & Meet & QnA --> ACT[14 server actions<br/>ADMIN_ID role checks]
+  ACT --> DB[(MongoDB 15 models)]
+  ACT --> Pay[Stripe]
+  ACT --> Vid[Mux + Stream]
+  ACT --> AI[Gemini drafts]
+  ACT --> Files[UploadThing]
+```
 
-* **Course Management:** Teachers can easily create and manage courses, adding attachments, videos (from YouTube or our secure platform using Mux), and engaging learning materials.
+## Key Features
 
-* **Secure Payments:** Enroll in courses seamlessly and securely using Stripe's trusted payment processing system.
+**Video courses with enrollment.** Mux + YouTube lessons, attachments, teacher studio, Stripe fulfillment, progress tracking. Why it matters: the paid learning loop funds everything else.
 
-* **Community Q&A:** Ask questions, get answers from teachers and peers, and leverage the power of AI-generated responses through OpenAI integration.
+**Live meetings.** Stream rooms with dashboard, history, recordings, personal rooms under the same identity. Why it matters: learners need realtime teacher support without a second account.
 
-* **Search & Discovery:** Easily find the courses and teachers you're looking for using our powerful search functionality.
+**Community Q&A.** Ask/answer with Markdown and code, tags, votes, saves, follows, announcements. Why it matters: answered-once questions compound into a knowledge base.
 
-* **Dark & Light Modes:** Customize your learning experience with our intuitive dark and light mode options.
+**Gemini assistance.** Server-side draft answers for human review. Why it matters: drafts accelerate help without replacing it.
 
-* **Notifications & Reminders:** Never miss an important meeting with our timely notification system.
+## Key Engineering Decisions
 
-<br>
+**Problem → Constraint → Decision → Tradeoff → Result**
 
-**✨ Tech Stack**
+1. **Three apps vs. one codebase.** Constraint: separate codebases triple auth, theming, and deployment work. Decision: route groups over a shared actions/Mongo layer with per-domain models. Tradeoff: 15 models and 14 action files in one repo — the largest surface in the portfolio. Result: one login, one theme, one search surface across learning, meetings, and Q&A.
 
-| Technology | Description |
-|---|---|
-| [Next.js](https://nextjs.org/) | A React framework for building fast and SEO-friendly web applications. |
-| [Shadcn UI](https://shadcn.com/) | A lightweight and customizable UI library for React. |
-| [Framer Motion](https://www.framer.com/motion/) | A powerful animation library for React. |
-| [Clerk](https://clerk.dev/) | User authentication and management made easy. |
-| [Zod](https://github.com/colinhacks/zod) | A TypeScript-first schema validation library. |
-| [MongoDB](https://www.mongodb.com/) | A popular NoSQL database. |
-| [Stream](https://getstream.io/) | Real-time messaging and activity feeds. |
-| [Mux](https://mux.com/) | Video infrastructure for developers. |
-| [UploadThing](https://uploadthing.com/) | File upload and storage service. |
-| [Tailwind CSS](https://tailwindcss.com/) | A utility-first CSS framework. |
-| [Stripe](https://stripe.com/) | Online payment processing platform. |
+2. **Actions instead of API routes.** Constraint: REST routes would duplicate role checks per endpoint. Decision: server actions with centralized `ADMIN_ID_*` authorization and webhook verification. Tradeoff: non-standard access patterns for API consumers. Result: authorization lives in one layer.
 
-<br>
+3. **Framework-version migration.** Constraint: Next 16 + React 19 changed async `params` and Stream session handling. Decision: the `3b862bc` migration commit (lockfile churn plus `proxy.ts` addition, Stream disconnect fix, Promise-typed params). Tradeoff: migration risk concentrated in one commit. Result: the stack runs on current Next/React.
 
-**🚀  Get Started**
+## Iteration Story
 
-1. **Clone the Repository:**
+Five commits only: initial import → two README passes → a community PR merge → the dependency/migration commit. Like `dokan`, this is a squashed-import history — the architecture is fully visible in the tree, but no incremental derivation is evidenced. Reviewers should read the route/action inventory, not the log.
 
+## User Experience
+
+Visitors land on marketing pages, then enter one shell with three sections. In LMS: browse, enroll via Stripe, watch, track progress. In Meetings: join live rooms, revisit history, use a personal room. In Q&A: ask with code blocks, answer, vote, save, follow teachers, read announcements. One login throughout.
+
+## Results & Evidence
+
+**Verifiable:** route groups, 15 models, 14 action files, `proxy.ts` public-route list, and the 22-key `.env.example` are all committed and reviewable.
+
+**Not claimed:** no tests, deployment target (no Dockerfile/vercel config), or usage metrics are recorded. The `rehype-sanitize` hardening claim needs call-site verification before being cited.
+
+## Technical Details
+
+| Area | Detail |
+| --- | --- |
+| Framework | Next.js ^16.3.4, React 19, Tailwind 3.4 |
+| Auth | `@clerk/nextjs` + `proxy.ts` (`/`, `/sign-in`, `/sign-up`, `/get-started`, `/api/webhooks` public) |
+| Data | `mongoose` + `mongodb`, 15 models, cached `connectToDatabase()` |
+| Services | `stripe`, `@mux/mux-node`, `@stream-io/video-react-sdk`, `uploadthing`, `@google/generative-ai`, TinyMCE |
+| Secrets | `.env.example` (22 names: Clerk ×7, `MONGODB_URL`, Stream ×2, Mux ×2, Stripe ×2, UploadThing ×2, `GEMINI_API_KEY`, TinyMCE, app URL, `ADMIN_ID_1/2`). Nothing committed. |
+
+## Setup
+
+1. **Prerequisites:** Node 20+, npm, MongoDB, Clerk, Stripe, Mux, Stream, UploadThing, Google AI, TinyMCE accounts; Stripe/Clerk CLIs for webhooks.
+2. **Clone and install:**
    ```bash
    git clone https://github.com/LowkeyGud/n-gvlh_project-ii.git
-   ```
-
-2. **Install Dependencies:**
-
-   ```bash
+   cd n-gvlh_project-ii
    npm install
    ```
-
-3. **Environment Variables:**
-
-   * **Important:** The `api` folder and `.env` file are hidden for security reasons. Create these and set the necessary environment variables (e.g., MongoDB connection string, Stripe secret key, etc.).
-
-4. **Local Development:**
-
+3. **Environment:** copy `.env.example` to `.env` and fill all 22 names; set the two admin Clerk user IDs.
+4. **External services:** create each provider project; register Clerk and Stripe webhook endpoints against the app URL.
+5. **Run:**
    ```bash
-   npm run dev
+   npm run dev     # next dev --webpack
    ```
+   Production: `npm run build` then `npm start`.
+6. **Verify:** enroll in a course (test Checkout), join a meeting room, ask and answer a question with a code block.
+7. **Common issues:** webhook failures → endpoint/secret mismatch; Stream disconnects → see the migration commit's session fix; admin actions denied → `ADMIN_ID_*` misconfigured.
 
-5. **Deployment (Vercel):**
+No CI workflow is committed in this repo.
 
-   * **Note:** This project is intended for educational purposes only and should not be deployed online.
+## Lessons / Takeaways
 
+- Route groups scaled further than expected — three products share auth, theme, and search without entanglement.
+- The actions-over-routes pattern centralized authorization but concentrated migration risk; the Wide migration commit is evidence of both.
+- Next steps: per-surface tests and verifying the sanitization claim at call sites.
 
+## Links
 
-* **`public`:** Static assets (images, fonts, etc.).
-* **`src`:** Source code for the application.
-    * **`components`:** Reusable UI components.
-    * **`api`:** Serverless functions.
-    * **`utils`:** Helper functions and utilities.
-<br>
+- Repository: `https://github.com/LowkeyGud/n-gvlh_project-ii`
+- Live Demo: `https://n-gvlh.vercel.app/`
 
+## Diagrams
 
-**📸 Screenshots**
+Generated from the codebase with the mermaid-skill workflow (validate via Kroki → export SVG → vision self-check). Sources live in `docs/diagrams/` — edit the `.mmd`, re-render, review. SVG is the committed format.
 
-<br>
+**System architecture** (`docs/diagrams/architecture.mmd` — one shell, three products, shared actions layer):
 
+![N-GVLH system architecture diagram](docs/diagrams/architecture.svg)
 
-**💡 Contributing**
+## Screenshots
 
-Contributions are welcome!
-<br>
+Captured from the live deployment:
 
-**🌟 About**
-
-This project is developed for my 3rd year project (**Project II**).
-<br>
-
-**⚠️ License**
-
-This project is licensed for educational purposes only. It may not be used for commercial purposes or hosted on any online platform. It is intended for learning and experimentation on your own computer.
-<br>
-
-
-**📂 Folder Structure**
-
-```
-n-gvlh_project-ii
-
- ┣ app
- ┃ ┣ (auth)
- ┃ ┃ ┣ (routes)
- ┃ ┃ ┃ ┣ sign-in
- ┃ ┃ ┃ ┃ ┗ [[...sign-in]]
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┗ sign-up
- ┃ ┃ ┃ ┃ ┗ [[...sign-up]]
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┗ layout.tsx
- ┃ ┣ (main)
- ┃ ┃ ┣ (home)
- ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┣ dashboard-section.tsx
- ┃ ┃ ┃ ┃ ┗ empty-dashboard.tsx
- ┃ ┃ ┃ ┣ layout.tsx
- ┃ ┃ ┃ ┣ loading.tsx
- ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┣ (lms)
- ┃ ┃ ┃ ┣ admin
- ┃ ┃ ┃ ┃ ┣ [id]
- ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ image-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ member-role-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┣ columns.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ data-table.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ courses
- ┃ ┃ ┃ ┃ ┗ [courseId]
- ┃ ┃ ┃ ┃ ┃ ┣ chapters
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ [chapterId]
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ attachment-box.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ course-enroll-button.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ course-progress-button.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┗ video-player.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ course-mobile-sidebar.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ course-navbar.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ course-sidebar-item.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ course-sidebar.tsx
- ┃ ┃ ┃ ┃ ┃ ┣ layout.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ my-courses
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ search
- ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┣ categories.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ category-item.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ teacher
- ┃ ┃ ┃ ┃ ┣ analytics
- ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ chart.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ data-card.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ courses
- ┃ ┃ ┃ ┃ ┃ ┣ [courseId]
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapters
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┗ [chapterId]
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-access-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-actions.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-description-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-title-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-video-choose.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-video-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┗ chapter-yt-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ actions.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ attachment-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ category-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ chapter-list.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ description-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┣ image-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┃ ┗ price-form.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┣ columns.tsx
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ data-table.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ create
- ┃ ┃ ┃ ┃ ┃ ┣ layout.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┗ layout.tsx
- ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┣ logo.tsx
- ┃ ┃ ┃ ┃ ┣ sidebar-item.tsx
- ┃ ┃ ┃ ┃ ┣ sidebar-routes.tsx
- ┃ ┃ ┃ ┃ ┗ title-form.tsx
- ┃ ┃ ┃ ┗ layout.tsx
- ┃ ┃ ┣ (meetings)
- ┃ ┃ ┃ ┣ meeting
- ┃ ┃ ┃ ┃ ┗ [id]
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ meetings
- ┃ ┃ ┃ ┃ ┣ dashboard
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ personal-room
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ previous
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ recordings
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ upcoming
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┗ layout.tsx
- ┃ ┃ ┃ ┗ layout.tsx
- ┃ ┃ ┣ (qna)
- ┃ ┃ ┃ ┣ all-questions
- ┃ ┃ ┃ ┃ ┣ loading.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ announcement
- ┃ ┃ ┃ ┃ ┣ new
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┣ AnnouncementForm.tsx
- ┃ ┃ ┃ ┃ ┃ ┣ CustomCard.tsx
- ┃ ┃ ┃ ┃ ┃ ┣ Markdown.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ NewAnnouncement.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ ask-question
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ profile
- ┃ ┃ ┃ ┃ ┣ edit
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┗ [id]
- ┃ ┃ ┃ ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ FollowButton.tsx
- ┃ ┃ ┃ ┃ ┃ ┣ loading.tsx
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ question
- ┃ ┃ ┃ ┃ ┣ edit
- ┃ ┃ ┃ ┃ ┃ ┗ [id]
- ┃ ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┗ [id]
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ saved
- ┃ ┃ ┃ ┃ ┣ loading.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ tags
- ┃ ┃ ┃ ┃ ┣ [id]
- ┃ ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┃ ┣ loading.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ users
- ┃ ┃ ┃ ┃ ┣ loading.tsx
- ┃ ┃ ┃ ┃ ┗ page.tsx
- ┃ ┃ ┃ ┣ layout.tsx
- ┃ ┃ ┃ ┗ not-found.tsx
- ┃ ┃ ┗ layout.tsx
- ┃ ┣ api......
- ┃ ┣ get-started
- ┃ ┃ ┣ _components
- ┃ ┃ ┃ ┗ type-writer.tsx
- ┃ ┃ ┣ layout.tsx
- ┃ ┃ ┗ page.tsx
- ┃ ┣ globals.css
- ┃ ┣ layout.tsx
- ┃ ┗ not-found.tsx
- ┣ components......
- ┣ constants
- ┃ ┣ filters.ts
- ┃ ┗ index.ts
- ┣ context
- ┃ ┗ teacherContext.tsx
- ┣ database
- ┃ ┣ answer.modal.ts
- ┃ ┣ attachment.modal.ts
- ┃ ┣ category.modal.ts
- ┃ ┣ chapter.modal.ts
- ┃ ┣ course.modal.ts
- ┃ ┣ forum.modal.ts
- ┃ ┣ interaction.modal.ts
- ┃ ┣ muxdata.modal.ts
- ┃ ┣ purchase.modal.ts
- ┃ ┣ question.modal.ts
- ┃ ┣ stripecustomer.modal.ts
- ┃ ┣ tag.modal.ts
- ┃ ┣ user.modal.ts
- ┃ ┣ userprogress.modal.ts
- ┃ ┗ warningRemover.ts
- ┣ hooks
- ┃ ┣ use-confetti-store.ts
- ┃ ┣ use-debounce.ts
- ┃ ┣ useGetCallById.ts
- ┃ ┗ useGetCalls.ts
- ┣ lib
- ┃ ┣ actions
- ┃ ┃ ┣ analytics.action.ts
- ┃ ┃ ┣ answer.action.ts
- ┃ ┃ ┣ chapter.action.ts
- ┃ ┃ ┣ course.action.ts
- ┃ ┃ ┣ forum.action.ts
- ┃ ┃ ┣ globalSearch.action.ts
- ┃ ┃ ┣ interaction.action.ts
- ┃ ┃ ┣ progress.action.ts
- ┃ ┃ ┣ question.action.ts
- ┃ ┃ ┣ safe-profile.action.ts
- ┃ ┃ ┣ shared.types.d.ts
- ┃ ┃ ┣ stream.action.ts
- ┃ ┃ ┣ tag.action.ts
- ┃ ┃ ┗ user.action.ts
- ┃ ┣ admin.ts
- ┃ ┣ format.ts
- ┃ ┣ mongoose.ts
- ┃ ┣ stripe.ts
- ┃ ┣ uploadthings.ts
- ┃ ┣ utils.ts
- ┃ ┗ validations.ts
- ┣ providers
- ┃ ┣ confetti-provider.tsx
- ┃ ┣ StreamClientProvider.tsx
- ┃ ┗ taoster-provider.tsx
- ┣ public......
- ┣ styles
- ┃ ┣ fonts.ts
- ┃ ┣ prism.css
- ┃ ┗ theme.css
- ┣ types
- ┃ ┗ index.d.ts
- ┣ .eslintrc.json
- ┣ .gitignore
- ┣ .prettierrc
- ┣ components.json
- ┣ next-env.d.ts
- ┣ next.config.mjs
- ┣ package-lock.json
- ┣ package.json
- ┣ postcss.config.mjs
- ┣ README.md
- ┣ tailwind.config.ts
- ┗ tsconfig.json
-```
-
-## Contributors
-- - [@Surajj042](https://github.com/Surajj042) (Suraj Gurung)
-- - [@LowkeyGud](https://github.com/LowkeyGud) (Chandramani Regmi)
-
-This project was built in collaboration.
+![N-GVLH dashboard with courses, meetings, and Q&A](docs/screenshots/ngvlh-dashboard.png)
